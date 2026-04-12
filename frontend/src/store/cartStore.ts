@@ -1,0 +1,78 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import type { CartItem, Product } from '../types';
+
+function key(productId: string, asKeychain: boolean) {
+  return `${productId}_${asKeychain}`;
+}
+
+interface CartState {
+  items: CartItem[];
+  addItem:        (product: Product, asKeychain?: boolean) => void;
+  removeItem:     (productId: string, asKeychain: boolean) => void;
+  updateQuantity: (productId: string, asKeychain: boolean, qty: number) => void;
+  clear: () => void;
+}
+
+export const useCartStore = create<CartState>()(
+  persist(
+    (set) => ({
+      items: [],
+
+      addItem: (product, asKeychain = false) =>
+        set((state) => {
+          const k = key(product.id, asKeychain);
+          const exists = state.items.find((i) => key(i.productId, i.asKeychain) === k);
+          if (exists) {
+            return {
+              items: state.items.map((i) =>
+                key(i.productId, i.asKeychain) === k
+                  ? { ...i, quantity: i.quantity + 1 }
+                  : i
+              ),
+            };
+          }
+          return {
+            items: [
+              ...state.items,
+              {
+                productId:  product.id,
+                name:       product.name,
+                price:      parseFloat(product.price),
+                imageUrl:   product.images[0]?.cloudinaryUrl,
+                quantity:   1,
+                asKeychain,
+              },
+            ],
+          };
+        }),
+
+      removeItem: (productId, asKeychain) =>
+        set((state) => ({
+          items: state.items.filter(
+            (i) => key(i.productId, i.asKeychain) !== key(productId, asKeychain)
+          ),
+        })),
+
+      updateQuantity: (productId, asKeychain, qty) => {
+        if (qty < 1) return;
+        set((state) => ({
+          items: state.items.map((i) =>
+            key(i.productId, i.asKeychain) === key(productId, asKeychain)
+              ? { ...i, quantity: qty }
+              : i
+          ),
+        }));
+      },
+
+      clear: () => set({ items: [] }),
+    }),
+    { name: 'bensoneria-cart' }
+  )
+);
+
+export const selectCartCount = (s: CartState) =>
+  s.items.reduce((sum, i) => sum + i.quantity, 0);
+
+export const selectCartTotal = (s: CartState) =>
+  s.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
