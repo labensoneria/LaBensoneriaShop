@@ -5,6 +5,71 @@
 
 ---
 
+## 0. Directrices de comportamiento
+
+Pautas generales para reducir errores comunes al programar. Complementan (no sustituyen) las reglas específicas del proyecto en las secciones siguientes.
+
+**Tradeoff:** Estas directrices priorizan cautela sobre velocidad. Para tareas triviales, usa el criterio.
+
+### 0.1 Pensar antes de codificar
+
+**No asumas. No ocultes dudas. Expón los tradeoffs.**
+
+Antes de implementar:
+- Declara tus suposiciones explícitamente. Si dudas, pregunta.
+- Si existen varias interpretaciones posibles, preséntalas — no elijas en silencio.
+- Si existe un enfoque más simple, dilo. Empuja cuando tenga sentido.
+- Si algo no está claro, para. Nombra lo que confunde. Pregunta.
+
+### 0.2 Simplicidad primero
+
+**Código mínimo que resuelva el problema. Nada especulativo.**
+
+- Nada más allá de lo pedido.
+- Sin abstracciones para código usado una sola vez.
+- Sin "flexibilidad" ni "configurabilidad" no solicitada.
+- Sin manejo de errores para escenarios imposibles.
+- Si escribes 200 líneas y podrían ser 50, reescríbelo.
+
+Pregúntate: "¿Un ingeniero senior diría que esto está sobrecomplicado?" Si sí, simplifica.
+
+### 0.3 Cambios quirúrgicos
+
+**Toca solo lo necesario. Limpia solo tu propio desorden.**
+
+Al editar código existente:
+- No "mejores" código, comentarios o formato adyacentes.
+- No refactorices lo que no está roto.
+- Respeta el estilo existente, aunque tú lo harías distinto.
+- Si detectas código muerto no relacionado, menciónalo — no lo borres.
+
+Cuando tus cambios creen huérfanos:
+- Elimina imports/variables/funciones que TUS cambios dejaron sin uso.
+- No borres código muerto preexistente salvo que te lo pidan.
+
+El test: cada línea cambiada debe trazarse directamente a la petición del usuario.
+
+### 0.4 Ejecución guiada por objetivos
+
+**Define criterios de éxito. Itera hasta verificar.**
+
+Transforma tareas en objetivos verificables:
+- "Añadir validación" → "Escribir tests para inputs inválidos y hacerlos pasar"
+- "Arreglar el bug" → "Escribir un test que lo reproduzca y hacerlo pasar"
+- "Refactorizar X" → "Asegurar que los tests pasan antes y después"
+
+Para tareas multi-paso, enuncia un plan breve:
+
+```
+1. [Paso] → verificar: [comprobación]
+2. [Paso] → verificar: [comprobación]
+3. [Paso] → verificar: [comprobación]
+```
+
+Criterios de éxito fuertes permiten iterar de forma independiente. Criterios débiles ("que funcione") requieren aclaraciones constantes.
+
+---
+
 ## 1. Qué es este proyecto
 
 **La Bensonería** es una tienda online de productos de crochet artesanal (llaveros y peluches).
@@ -17,19 +82,19 @@ El proyecto está en desarrollo activo. Seguimos un plan de fases numeradas.
 
 ## 2. Stack tecnológico
 
-| Capa           | Tecnología                    | Notas                                        |
-| -------------- | ------------------------------ | -------------------------------------------- |
-| Frontend       | React 18 + Vite + TypeScript   | SPA en `/frontend`                         |
-| Backend        | Express + TypeScript           | API REST en `/backend`                     |
-| ORM            | Prisma                         | Esquema en `/backend/prisma/schema.prisma` |
-| Base de datos  | PostgreSQL 15                  | Gestionada vía Docker (local) o Railway (prod) |
-| Imágenes      | Cloudinary                     | SDK `cloudinary`en backend                 |
-| Autenticación | JWT (jsonwebtoken) + bcryptjs  | Sin sesiones de servidor                     |
-| Contenedores   | Docker + Docker Compose        | Solo para desarrollo local                  |
-| Despliegue frontend | Vercel                    | Repositorio conectado, deploy automático    |
-| Despliegue backend  | Railway                   | Backend + PostgreSQL en Railway             |
-| Tests frontend | Vitest + React Testing Library |                                              |
-| Tests backend  | Jest + Supertest               |                                              |
+| Capa                | Tecnología                    | Notas                                           |
+| ------------------- | ------------------------------ | ----------------------------------------------- |
+| Frontend            | React 18 + Vite + TypeScript   | SPA en `/frontend`                            |
+| Backend             | Express + TypeScript           | API REST en `/backend`                        |
+| ORM                 | Prisma                         | Esquema en `/backend/prisma/schema.prisma`    |
+| Base de datos       | PostgreSQL 15                  | Gestionada vía Docker (local) o Railway (prod) |
+| Imágenes           | Cloudinary                     | SDK `cloudinary`en backend                    |
+| Autenticación      | JWT (jsonwebtoken) + bcryptjs  | Sin sesiones de servidor                        |
+| Contenedores        | Docker + Docker Compose        | Solo para desarrollo local                      |
+| Despliegue frontend | Vercel                         | Repositorio conectado, deploy automático       |
+| Despliegue backend  | Railway                        | Backend + PostgreSQL en Railway                 |
+| Tests frontend      | Vitest + React Testing Library |                                                 |
+| Tests backend       | Jest + Supertest               |                                                 |
 
 ---
 
@@ -318,65 +383,7 @@ colors: {
 }
 ```
 
----
-
-## 8. Plan de fases
-
-Implementa **exactamente** la fase indicada en cada sesión. No anticipes fases futuras.
-
-### Fase 1 — Base y catálogo con admin de productos
-
-* [X] Docker Compose: frontend + backend + postgres
-* [X] Schema Prisma completo + migraciones iniciales
-* [X] Seed: usuario admin + 3 productos de ejemplo
-* [X] Backend: endpoints GET /api/products y GET /api/products/:id
-* [X] Backend: endpoints admin de productos (CRUD + Cloudinary)
-* [X] Frontend: página de catálogo con cuadrícula y ordenación
-* [X] Frontend: ficha de producto con galería
-* [X] Frontend: panel admin — listado y formulario de producto
-* [X] Tests base (unitarios de servicios + integración de endpoints)
-
-### Fase 2 — Carrito y pedidos
-
-* [x] Carrito en localStorage + Zustand (`bensoneria-cart`)
-* [x] Checkout como invitado (con `optionalAuth` para usuarios registrados)
-* [x] Envío: tabla fija por zona (Opción A decidida por el propietario)
-* [x] Página de confirmación de pedido (`/pedido/:id`)
-* [x] Admin: gestión de pedidos y estados (`/admin/pedidos`)
-* [x] Fix: redirección al carrito vacío tras confirmar pedido (ref `orderPlaced`)
-* [x] Campo `street2` (escalera/piso/puerta) opcional en dirección de envío
-
-### Fase 3 — Usuarios y reviews
-
-* [x] Registro y login con JWT (nombre obligatorio en registro)
-* [x] Perfil de usuario con dirección de envío por defecto guardada en `User`
-* [x] Checkout pre-rellena dirección desde perfil + checkbox para actualizarla
-* [x] Historial de pedidos del usuario autenticado (`/mis-pedidos`)
-* [x] Reviews de productos post-pedido completado (una por usuario/producto)
-
-### Fase 4 — Admin avanzado
-
-* [x] Dashboard de ventas por producto con selector de fechas
-* [x] Informes económicos en rango de tiempo
-* [x] Mensajes emergentes con cookie de sesión diaria
-* [x] Desactivación temporal de pedidos
-* [x] Gestión de estados de pedido + contacto con cliente
-
-### Fase 5 — Pago
-
-* [x] Stripe Checkout elegido para la primera implementación
-* [x] Flujo: crear `Order` pendiente → crear sesión Stripe Checkout → redirigir a Stripe → confirmar pago por webhook → actualizar `paymentStatus` y pasar el pedido a `PROCESSING`
-* [x] Campos en `Order`: `paymentStatus` (enum `PaymentStatus`), `paymentProvider`, `stripeCheckoutSessionId`, `stripePaymentIntentId`, `paidAt`, `paymentCurrency`, `paymentAmount`
-* [x] Migración `20260326200000_add_payment_fields_to_order`
-* [x] Backend: `POST /api/payments/stripe/checkout-session` y `POST /api/payments/stripe/webhook`
-* [x] Webhook registrado en `app.ts` ANTES de `express.json()` con `express.raw()` para verificar firma Stripe
-* [x] Frontend: `CheckoutPage` llama a `createOrder` → `createStripeCheckoutSession` → `window.location.href` a Stripe. Botón "Pagar con tarjeta". Aviso si el usuario cancela en Stripe.
-* [x] Frontend: `OrderConfirmationPage` muestra estado de pago + aviso "procesando" si viene de `?pagado=true`
-* [x] Tests de flujo de pago
-
----
-
-## 9. Restricciones importantes (NO hacer sin consultar)
+## 8. Restricciones importantes (NO hacer sin consultar)
 
 * **NO implementes pasarela de pago** sin presentar primero las alternativas disponibles (Stripe, PayPal, Redsys, Bizum) con ventajas e inconvenientes.
 * **NO implementes cálculo de envío** sin presentar primero las alternativas (tabla fija, API Correos, tarifa por peso/zona).
@@ -389,7 +396,7 @@ Implementa **exactamente** la fase indicada en cada sesión. No anticipes fases 
 
 ---
 
-## 10. Cómo ejecutar el proyecto
+## 9. Cómo ejecutar el proyecto
 
 ```bash
 # Levantar todo con Docker
@@ -414,11 +421,7 @@ cd frontend && npm test
 
 ---
 
-## 11. Estado actual del proyecto
-
-**Fase activa: 5 — en progreso**
-**Último paso completado:** Fase 5 parcial — integración Stripe Checkout: schema, migración, backend (service/controller/routes), frontend (checkout y confirmación) (2026-03-26)
-**Próxima tarea:** Tests del flujo de pago (Fase 5)
+## 10. Estado actual del proyecto
 
 ### Decisiones tomadas en Fase 5
 
