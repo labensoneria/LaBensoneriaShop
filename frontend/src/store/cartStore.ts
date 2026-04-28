@@ -11,6 +11,7 @@ interface CartState {
   addItem:        (product: Product, asKeychain?: boolean) => void;
   removeItem:     (productId: string, asKeychain: boolean) => void;
   updateQuantity: (productId: string, asKeychain: boolean, qty: number) => void;
+  syncStock:      (productId: string, newStock: number | null) => void;
   clear: () => void;
 }
 
@@ -46,6 +47,7 @@ export const useCartStore = create<CartState>()(
                 imageUrl:   product.images[0]?.cloudinaryUrl,
                 quantity:   1,
                 asKeychain,
+                stock:      product.stock ?? null,
               },
             ],
           };
@@ -61,13 +63,24 @@ export const useCartStore = create<CartState>()(
       updateQuantity: (productId, asKeychain, qty) => {
         if (qty < 1) return;
         set((state) => ({
-          items: state.items.map((i) =>
-            key(i.productId, i.asKeychain) === key(productId, asKeychain)
-              ? { ...i, quantity: qty }
-              : i
-          ),
+          items: state.items.map((i) => {
+            if (key(i.productId, i.asKeychain) !== key(productId, asKeychain)) return i;
+            const capped = i.stock !== null ? Math.min(qty, i.stock) : qty;
+            return { ...i, quantity: capped };
+          }),
         }));
       },
+
+      syncStock: (productId, newStock) =>
+        set((state) => ({
+          items: state.items
+            .map((i) => {
+              if (i.productId !== productId) return i;
+              const capped = newStock !== null ? Math.min(i.quantity, newStock) : i.quantity;
+              return { ...i, stock: newStock, quantity: capped };
+            })
+            .filter((i) => i.quantity > 0),
+        })),
 
       clear: () => set({ items: [] }),
     }),

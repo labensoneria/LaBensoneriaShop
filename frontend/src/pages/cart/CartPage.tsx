@@ -1,14 +1,38 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCartStore, selectCartTotal } from '../../store/cartStore';
 import { getOrdersAvailability } from '../../api/orders';
+import { getProduct } from '../../api/products';
 
 export default function CartPage() {
   const navigate = useNavigate();
-  const { items, removeItem, updateQuantity } = useCartStore();
+  const { items, removeItem, updateQuantity, syncStock } = useCartStore();
   const total = useCartStore(selectCartTotal);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+  const [stockAdjusted, setStockAdjusted] = useState(false);
+
+  useEffect(() => {
+    if (items.length === 0) return;
+    const uniqueIds = [...new Set(items.map((i) => i.productId))];
+    Promise.all(uniqueIds.map(getProduct))
+      .then((products) => {
+        let changed = false;
+        products.forEach((p) => {
+          const newStock = p.stock ?? null;
+          const affected = items.filter((i) => i.productId === p.id);
+          affected.forEach((i) => {
+            if (i.stock !== newStock || (newStock !== null && i.quantity > newStock) || newStock === 0) {
+              changed = true;
+            }
+          });
+          syncStock(p.id, newStock);
+        });
+        if (changed) setStockAdjusted(true);
+      })
+      .catch(() => null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleContinueToCheckout() {
     setAvailabilityError(null);
@@ -50,6 +74,12 @@ export default function CartPage() {
     <div className="max-w-3xl mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-brand-dark mb-8">Carrito</h1>
 
+      {stockAdjusted && (
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
+          El stock de algunos productos ha cambiado. Tu carrito ha sido actualizado.
+        </p>
+      )}
+
       <div className="flex flex-col gap-4 mb-8">
         {items.map((item) => (
           <div
@@ -72,22 +102,28 @@ export default function CartPage() {
               <p className="text-brand-green font-bold">{item.price.toFixed(2)} EUR</p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => updateQuantity(item.productId, item.asKeychain, item.quantity - 1)}
-                className="w-7 h-7 rounded-full bg-brand-cream text-brand-dark font-bold hover:bg-brand-greenLight hover:text-white transition-colors flex items-center justify-center"
-                aria-label="Reducir cantidad"
-              >
-                -
-              </button>
-              <span className="w-6 text-center font-semibold text-brand-dark">{item.quantity}</span>
-              <button
-                onClick={() => updateQuantity(item.productId, item.asKeychain, item.quantity + 1)}
-                className="w-7 h-7 rounded-full bg-brand-cream text-brand-dark font-bold hover:bg-brand-greenLight hover:text-white transition-colors flex items-center justify-center"
-                aria-label="Aumentar cantidad"
-              >
-                +
-              </button>
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => updateQuantity(item.productId, item.asKeychain, item.quantity - 1)}
+                  className="w-7 h-7 rounded-full bg-brand-cream text-brand-dark font-bold hover:bg-brand-greenLight hover:text-white transition-colors flex items-center justify-center"
+                  aria-label="Reducir cantidad"
+                >
+                  -
+                </button>
+                <span className="w-6 text-center font-semibold text-brand-dark">{item.quantity}</span>
+                <button
+                  onClick={() => updateQuantity(item.productId, item.asKeychain, item.quantity + 1)}
+                  disabled={item.stock !== null && item.quantity >= item.stock}
+                  className="w-7 h-7 rounded-full bg-brand-cream text-brand-dark font-bold hover:bg-brand-greenLight hover:text-white transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Aumentar cantidad"
+                >
+                  +
+                </button>
+              </div>
+              {item.stock !== null && item.quantity >= item.stock && (
+                <span className="text-xs text-brand-sky">Máx. disponible</span>
+              )}
             </div>
 
             <div className="text-right flex-shrink-0">

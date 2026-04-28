@@ -48,6 +48,7 @@ export interface CartItem {
   imageUrl?: string;
   quantity:  number;
   asKeychain: boolean;
+  stock:     number | null;
 }
 
 // ── Pedidos ──────────────────────────────────────────────────────────────────

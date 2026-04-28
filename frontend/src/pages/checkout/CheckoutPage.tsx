@@ -281,7 +281,14 @@ export default function CheckoutPage() {
           )}
 
           {error && (
-            <p className="text-red-500 text-sm bg-red-50 rounded-xl px-4 py-3">{error}</p>
+            <div className="text-red-500 text-sm bg-red-50 rounded-xl px-4 py-3">
+              <p>{error}</p>
+              {(error.toLowerCase().includes('stock') || error.toLowerCase().includes('agotado')) && (
+                <Link to="/carrito" className="underline font-medium block mt-1">
+                  Volver al carrito para ajustar las cantidades
+                </Link>
+              )}
+            </div>
           )}
 
           <button
