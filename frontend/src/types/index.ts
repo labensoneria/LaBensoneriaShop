@@ -22,6 +22,7 @@ export interface Product {
   price: string; // Decimal comes as string from JSON
   convertibleToKeychain: boolean;
   soldCount: number;
+  stock: number | null;
   active: boolean;
   publishedAt: string;
   images: ProductImage[];
@@ -64,6 +65,7 @@ export interface OrderItemDetail {
   product: {
     name:   string;
     images: { cloudinaryUrl: string }[];
+    stock?: number | null;
   };
 }
 

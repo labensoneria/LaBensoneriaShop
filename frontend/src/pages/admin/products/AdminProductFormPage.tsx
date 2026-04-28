@@ -15,6 +15,7 @@ interface FormState {
   description: string;
   price: string;
   convertibleToKeychain: boolean;
+  stock: string;
 }
 
 const EMPTY: FormState = {
@@ -22,6 +23,7 @@ const EMPTY: FormState = {
   description: '',
   price: '',
   convertibleToKeychain: false,
+  stock: '',
 };
 
 export default function AdminProductFormPage() {
@@ -62,6 +64,7 @@ export default function AdminProductFormPage() {
           description: found.description,
           price: found.price,
           convertibleToKeychain: found.convertibleToKeychain,
+          stock: found.stock !== null && found.stock !== undefined ? String(found.stock) : '',
         });
       } catch (err: unknown) {
         if (ignore) return;
@@ -99,6 +102,7 @@ export default function AdminProductFormPage() {
         description: form.description,
         price: parseFloat(form.price),
         convertibleToKeychain: form.convertibleToKeychain,
+        stock: form.stock !== '' ? parseInt(form.stock, 10) : null,
       };
 
       const saved = isEdit && id
@@ -187,6 +191,22 @@ export default function AdminProductFormPage() {
             />
             Disponible en version llavero
           </label>
+
+          <div>
+            <label className="block text-sm font-medium text-brand-dark mb-1">
+              Stock <span className="text-gray-400 font-normal">(dejar vacío para no controlar)</span>
+            </label>
+            <input
+              name="stock"
+              type="number"
+              min="0"
+              step="1"
+              value={form.stock}
+              onChange={handleChange}
+              placeholder="Sin control de stock"
+              className="w-full border border-brand-greenLight rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-green"
+            />
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-brand-dark mb-1">

@@ -32,9 +32,9 @@ export function getAdminOrders(params?: { page?: number; limit?: number; status?
   return apiFetch<PaginatedOrders>(`/api/admin/orders?${qs}`);
 }
 
-export function updateOrderStatus(id: string, status: OrderStatus) {
+export function updateOrderStatus(id: string, status: OrderStatus, replenishStock?: Record<string, number>) {
   return apiFetch<Order>(`/api/admin/orders/${id}/status`, {
     method: 'PUT',
-    body:   JSON.stringify({ status }),
+    body:   JSON.stringify({ status, ...(replenishStock ? { replenishStock } : {}) }),
   });
 }

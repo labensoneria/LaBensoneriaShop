@@ -94,6 +94,14 @@ export async function createOrder(input: CreateOrderInput) {
     if (item.asKeychain && !product.convertibleToKeychain) {
       throw new AppError(`"${product.name}" no está disponible en versión llavero`, 400);
     }
+    if (product.stock !== null) {
+      if (product.stock === 0) {
+        throw new AppError(`"${product.name}" está agotado`, 409);
+      }
+      if (product.stock < item.quantity) {
+        throw new AppError(`Stock insuficiente para "${product.name}" (disponible: ${product.stock})`, 409);
+      }
+    }
   }
 
   // Calcular importes (el precio siempre viene de la DB, nunca del cliente)
@@ -136,11 +144,15 @@ export async function createOrder(input: CreateOrderInput) {
     },
   });
 
-  // Incrementar contadores de ventas
+  // Incrementar contadores de ventas y decrementar stock si aplica
   for (const item of input.items) {
+    const product = productMap.get(item.productId)!;
     await prisma.product.update({
       where: { id: item.productId },
-      data:  { soldCount: { increment: item.quantity } },
+      data: {
+        soldCount: { increment: item.quantity },
+        ...(product.stock !== null ? { stock: { decrement: item.quantity } } : {}),
+      },
     });
   }
 

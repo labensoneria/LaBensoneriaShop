@@ -24,10 +24,14 @@ export const useCartStore = create<CartState>()(
           const k = key(product.id, asKeychain);
           const exists = state.items.find((i) => key(i.productId, i.asKeychain) === k);
           if (exists) {
+            const newQty = exists.quantity + 1;
+            const capped = product.stock !== null && product.stock !== undefined
+              ? Math.min(newQty, product.stock)
+              : newQty;
             return {
               items: state.items.map((i) =>
                 key(i.productId, i.asKeychain) === k
-                  ? { ...i, quantity: i.quantity + 1 }
+                  ? { ...i, quantity: capped }
                   : i
               ),
             };

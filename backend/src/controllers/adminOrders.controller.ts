@@ -11,6 +11,7 @@ const listQuerySchema = z.object({
 
 const statusSchema = z.object({
   status: z.enum(['PENDING', 'PROCESSING', 'SHIPPED', 'COMPLETED']),
+  replenishStock: z.record(z.string(), z.number().int().min(0)).optional(),
 });
 
 export async function list(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -24,8 +25,8 @@ export async function list(req: Request, res: Response, next: NextFunction): Pro
 
 export async function updateStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { status } = statusSchema.parse(req.body);
-    const order = await adminOrdersService.updateOrderStatus(req.params.id, status as OrderStatus);
+    const { status, replenishStock } = statusSchema.parse(req.body);
+    const order = await adminOrdersService.updateOrderStatus(req.params.id, status as OrderStatus, replenishStock);
     res.json(order);
   } catch (err) {
     next(err);

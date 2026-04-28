@@ -12,6 +12,7 @@ const createSchema = z.object({
   description:          z.string().min(1),
   price:                z.coerce.number().positive(),
   convertibleToKeychain: z.boolean().optional(),
+  stock:                z.number().int().min(0).nullable().optional(),
 });
 
 const updateSchema = createSchema.partial().extend({

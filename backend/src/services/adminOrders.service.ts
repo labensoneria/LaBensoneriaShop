@@ -10,7 +10,7 @@ export async function listOrders(page = 1, limit = 20, status?: OrderStatus) {
     prisma.order.findMany({
       where,
       include: {
-        items:   { include: { product: { select: { name: true } } } },
+        items:   { include: { product: { select: { name: true, stock: true } } } },
         address: true,
       },
       orderBy: { createdAt: 'desc' },
@@ -23,16 +23,36 @@ export async function listOrders(page = 1, limit = 20, status?: OrderStatus) {
   return { orders, total, page, limit, pages: Math.ceil(total / limit) };
 }
 
-export async function updateOrderStatus(id: string, status: OrderStatus) {
+export async function updateOrderStatus(
+  id: string,
+  status: OrderStatus,
+  replenishStock?: Record<string, number>
+) {
   const order = await prisma.order.findUnique({ where: { id } });
   if (!order) throw new AppError('Pedido no encontrado', 404);
 
-  return prisma.order.update({
+  const updated = await prisma.order.update({
     where: { id },
     data:  { status },
     include: {
-      items:   { include: { product: { select: { name: true } } } },
+      items:   { include: { product: { select: { name: true, stock: true } } } },
       address: true,
     },
   });
+
+  if (replenishStock) {
+    for (const [productId, qty] of Object.entries(replenishStock)) {
+      if (qty > 0) {
+        const product = await prisma.product.findUnique({ where: { id: productId } });
+        if (product && product.stock !== null) {
+          await prisma.product.update({
+            where: { id: productId },
+            data:  { stock: { increment: qty } },
+          });
+        }
+      }
+    }
+  }
+
+  return updated;
 }

@@ -32,7 +32,11 @@ export async function createProduct(data: {
   description: string;
   price: number;
   convertibleToKeychain?: boolean;
+  stock?: number | null;
 }) {
+  if (data.stock !== undefined && data.stock !== null && data.stock < 0) {
+    throw new AppError('El stock no puede ser negativo', 400);
+  }
   return prisma.product.create({ data });
 }
 
@@ -44,8 +48,12 @@ export async function updateProduct(
     price?: number;
     convertibleToKeychain?: boolean;
     active?: boolean;
+    stock?: number | null;
   }
 ) {
+  if (data.stock !== undefined && data.stock !== null && data.stock < 0) {
+    throw new AppError('El stock no puede ser negativo', 400);
+  }
   const product = await prisma.product.findUnique({ where: { id } });
   if (!product) throw new AppError('Producto no encontrado', 404);
   return prisma.product.update({ where: { id }, data });
