@@ -8,11 +8,12 @@ const listQuerySchema = z.object({
 });
 
 const createSchema = z.object({
-  name:                 z.string().min(1),
-  description:          z.string().min(1),
-  price:                z.coerce.number().positive(),
+  name:                  z.string().min(1),
+  description:           z.string().optional().nullable(),
+  price:                 z.coerce.number().positive(),
   convertibleToKeychain: z.boolean().optional(),
-  stock:                z.number().int().min(0).nullable().optional(),
+  stock:                 z.number().int().min(0).nullable().optional(),
+  discountPercent:       z.number().int().min(1).max(99).nullable().optional(),
 });
 
 const updateSchema = createSchema.partial().extend({

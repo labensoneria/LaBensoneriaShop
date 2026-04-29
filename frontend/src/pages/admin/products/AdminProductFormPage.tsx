@@ -16,6 +16,7 @@ interface FormState {
   price: string;
   convertibleToKeychain: boolean;
   stock: string;
+  discountPercent: string;
 }
 
 const EMPTY: FormState = {
@@ -24,6 +25,7 @@ const EMPTY: FormState = {
   price: '',
   convertibleToKeychain: false,
   stock: '',
+  discountPercent: '',
 };
 
 export default function AdminProductFormPage() {
@@ -61,10 +63,11 @@ export default function AdminProductFormPage() {
         setProduct(found);
         setForm({
           name: found.name,
-          description: found.description,
+          description: found.description ?? '',
           price: found.price,
           convertibleToKeychain: found.convertibleToKeychain,
           stock: found.stock !== null && found.stock !== undefined ? String(found.stock) : '',
+          discountPercent: found.discountPercent !== null && found.discountPercent !== undefined ? String(found.discountPercent) : '',
         });
       } catch (err: unknown) {
         if (ignore) return;
@@ -99,10 +102,11 @@ export default function AdminProductFormPage() {
     try {
       const payload = {
         name: form.name,
-        description: form.description,
+        description: form.description || null,
         price: parseFloat(form.price),
         convertibleToKeychain: form.convertibleToKeychain,
         stock: form.stock !== '' ? parseInt(form.stock, 10) : null,
+        discountPercent: form.discountPercent !== '' ? parseInt(form.discountPercent, 10) : null,
       };
 
       const saved = isEdit && id
@@ -156,12 +160,13 @@ export default function AdminProductFormPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-brand-dark mb-1">Descripcion</label>
+            <label className="block text-sm font-medium text-brand-dark mb-1">
+              Descripcion <span className="text-gray-400 font-normal">(opcional)</span>
+            </label>
             <textarea
               name="description"
               value={form.description}
               onChange={handleChange}
-              required
               rows={4}
               className="w-full border border-brand-greenLight rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-green resize-none"
             />
@@ -204,6 +209,23 @@ export default function AdminProductFormPage() {
               value={form.stock}
               onChange={handleChange}
               placeholder="Sin control de stock"
+              className="w-full border border-brand-greenLight rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-green"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-brand-dark mb-1">
+              Descuento <span className="text-gray-400 font-normal">% (1–99, dejar vacío para sin descuento)</span>
+            </label>
+            <input
+              name="discountPercent"
+              type="number"
+              min="1"
+              max="99"
+              step="1"
+              value={form.discountPercent}
+              onChange={handleChange}
+              placeholder="Sin descuento"
               className="w-full border border-brand-greenLight rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-green"
             />
           </div>

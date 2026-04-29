@@ -57,6 +57,7 @@ export default function ProductPage() {
   }
 
   const price = parseFloat(product.price).toFixed(2);
+  const hasDiscount = (product.appliedDiscountPercent ?? 0) > 0;
   const isOutOfStock = product.stock !== null && product.stock !== undefined && product.stock === 0;
   const isLowStock = product.stock !== null && product.stock !== undefined && product.stock > 0 && product.stock <= 5;
   const avgStars = product.reviews?.length
@@ -109,10 +110,21 @@ export default function ProductPage() {
             )}
 
             {/* Price tag */}
-            <div className="flex items-baseline gap-1 mb-3">
-              <span className="text-4xl font-extrabold text-brand-green tracking-tight">{price}</span>
-              <span className="text-xl font-semibold text-brand-green/80">&euro;</span>
-            </div>
+            {hasDiscount ? (
+              <div className="flex items-baseline gap-2 mb-3 flex-wrap">
+                <span className="text-lg text-gray-400 line-through">{price}&nbsp;&euro;</span>
+                <span className="text-4xl font-extrabold text-red-500 tracking-tight">{product.effectivePrice}</span>
+                <span className="text-xl font-semibold text-red-500/80">&euro;</span>
+                <span className="text-sm font-semibold bg-red-100 text-red-600 rounded-full px-2 py-0.5">
+                  -{product.appliedDiscountPercent}%
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-baseline gap-1 mb-3">
+                <span className="text-4xl font-extrabold text-brand-green tracking-tight">{price}</span>
+                <span className="text-xl font-semibold text-brand-green/80">&euro;</span>
+              </div>
+            )}
 
             {isOutOfStock && (
               <p className="inline-flex items-center gap-1.5 text-sm text-gray-500 bg-gray-100 rounded-full px-3 py-1 mb-4 self-start">

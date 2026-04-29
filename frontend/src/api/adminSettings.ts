@@ -1,8 +1,9 @@
 import { apiFetch } from './client';
 
 export interface AppSettingsMap {
-  ordersEnabled:  string;
-  newProductDays: string;
+  ordersEnabled:         string;
+  newProductDays:        string;
+  globalDiscountPercent: string;
 }
 
 export function getNewProductDays() {

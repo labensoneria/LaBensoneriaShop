@@ -43,7 +43,7 @@ export const useCartStore = create<CartState>()(
               {
                 productId:  product.id,
                 name:       product.name,
-                price:      parseFloat(product.price),
+                price:      parseFloat(product.effectivePrice ?? product.price),
                 imageUrl:   product.images[0]?.cloudinaryUrl,
                 quantity:   1,
                 asKeychain,
