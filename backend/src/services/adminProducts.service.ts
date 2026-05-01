@@ -29,10 +29,19 @@ export async function getProductById(id: string) {
 
 export async function createProduct(data: {
   name: string;
-  description: string;
+  description?: string | null;
   price: number;
   convertibleToKeychain?: boolean;
+  stock?: number | null;
+  discountPercent?: number | null;
 }) {
+  if (data.stock !== undefined && data.stock !== null && data.stock < 0) {
+    throw new AppError('El stock no puede ser negativo', 400);
+  }
+  if (data.discountPercent !== undefined && data.discountPercent !== null &&
+      (data.discountPercent < 1 || data.discountPercent > 99)) {
+    throw new AppError('El descuento debe estar entre 1 y 99', 400);
+  }
   return prisma.product.create({ data });
 }
 
@@ -40,12 +49,21 @@ export async function updateProduct(
   id: string,
   data: {
     name?: string;
-    description?: string;
+    description?: string | null;
     price?: number;
     convertibleToKeychain?: boolean;
     active?: boolean;
+    stock?: number | null;
+    discountPercent?: number | null;
   }
 ) {
+  if (data.stock !== undefined && data.stock !== null && data.stock < 0) {
+    throw new AppError('El stock no puede ser negativo', 400);
+  }
+  if (data.discountPercent !== undefined && data.discountPercent !== null &&
+      (data.discountPercent < 1 || data.discountPercent > 99)) {
+    throw new AppError('El descuento debe estar entre 1 y 99', 400);
+  }
   const product = await prisma.product.findUnique({ where: { id } });
   if (!product) throw new AppError('Producto no encontrado', 404);
   return prisma.product.update({ where: { id }, data });

@@ -11,9 +11,11 @@ export function adminGetProduct(id: string): Promise<Product> {
 
 export function adminCreateProduct(data: {
   name: string;
-  description: string;
+  description?: string | null;
   price: number;
   convertibleToKeychain?: boolean;
+  stock?: number | null;
+  discountPercent?: number | null;
 }): Promise<Product> {
   return apiFetch<Product>('/api/admin/products', {
     method: 'POST',
@@ -25,10 +27,12 @@ export function adminUpdateProduct(
   id: string,
   data: Partial<{
     name: string;
-    description: string;
+    description: string | null;
     price: number;
     convertibleToKeychain: boolean;
     active: boolean;
+    stock: number | null;
+    discountPercent: number | null;
   }>
 ): Promise<Product> {
   return apiFetch<Product>(`/api/admin/products/${id}`, {

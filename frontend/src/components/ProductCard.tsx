@@ -11,14 +11,23 @@ interface Props {
 export default function ProductCard({ product, newProductDays = 14 }: Props) {
   const thumb = product.images[0]?.cloudinaryUrl;
   const price = parseFloat(product.price).toFixed(2);
+  const hasDiscount = (product.appliedDiscountPercent ?? 0) > 0;
   const isNew = (Date.now() - new Date(product.publishedAt).getTime()) < newProductDays * 24 * 60 * 60 * 1000;
+  const isOutOfStock = product.stock !== null && product.stock !== undefined && product.stock === 0;
+  const isLowStock = product.stock !== null && product.stock !== undefined && product.stock > 0 && product.stock <= 5;
   const [imageLoaded, setImageLoaded] = useState(false);
 
   return (
-    <Link to={`/productos/${product.id}`} className="card">
+    <Link to={`/productos/${product.id}`} className={`card${isOutOfStock ? ' opacity-60' : ''}`}>
       <div className="card__shine" />
       <div className="card__glow" />
-      {isNew && <span className="card__badge">Nuevo!</span>}
+      {isOutOfStock && (
+        <span className="card__badge" style={{ backgroundColor: '#9ca3af' }}>No disponible</span>
+      )}
+      {!isOutOfStock && isLowStock && (
+        <span className="card__badge" style={{ backgroundColor: '#5B9BD5' }}>{product.stock} disponible(s)</span>
+      )}
+      {!isOutOfStock && !isLowStock && isNew && <span className="card__badge">Nuevo!</span>}
 
       <div className="card__content">
         <div className="card__image">
@@ -45,7 +54,17 @@ export default function ProductCard({ product, newProductDays = 14 }: Props) {
         </div>
 
         <div className="card__footer">
-          <span className="card__price">{price} €</span>
+          {hasDiscount ? (
+            <div className="flex flex-col leading-tight">
+              <span className="text-xs text-gray-400 line-through">{price} €</span>
+              <span className="card__price text-red-500">
+                {product.effectivePrice} €
+                <span className="text-xs font-normal ml-1">-{product.appliedDiscountPercent}%</span>
+              </span>
+            </div>
+          ) : (
+            <span className="card__price">{price} €</span>
+          )}
           <div className="card__button">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />

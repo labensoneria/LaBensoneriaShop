@@ -1,5 +1,6 @@
 import prisma from '../utils/prisma';
 import { AppError } from '../utils/AppError';
+import { computeEffectivePrice } from './products.service';
 
 export type ShippingZone = 'peninsular' | 'baleares' | 'canarias' | 'international';
 
@@ -94,12 +95,29 @@ export async function createOrder(input: CreateOrderInput) {
     if (item.asKeychain && !product.convertibleToKeychain) {
       throw new AppError(`"${product.name}" no está disponible en versión llavero`, 400);
     }
+    if (product.stock !== null) {
+      if (product.stock === 0) {
+        throw new AppError(`"${product.name}" está agotado`, 409);
+      }
+      if (product.stock < item.quantity) {
+        throw new AppError(`Stock insuficiente para "${product.name}" (disponible: ${product.stock})`, 409);
+      }
+    }
   }
 
   // Calcular importes (el precio siempre viene de la DB, nunca del cliente)
+  const globalDiscountSetting = await prisma.appSettings.findUnique({ where: { key: 'globalDiscountPercent' } });
+  const globalPct = globalDiscountSetting ? (parseInt(globalDiscountSetting.value, 10) || 0) : 0;
+
   let subtotal = 0;
+  const unitPrices = new Map<string, number>();
   for (const item of input.items) {
-    subtotal += parseFloat(productMap.get(item.productId)!.price.toString()) * item.quantity;
+    const product = productMap.get(item.productId)!;
+    const rawPrice = parseFloat(product.price.toString());
+    const { effectivePrice } = computeEffectivePrice(rawPrice, product.discountPercent, globalPct);
+    const unitPrice = parseFloat(effectivePrice);
+    unitPrices.set(item.productId, unitPrice);
+    subtotal += unitPrice * item.quantity;
   }
 
   const shippingCost = await getShippingCost(input.shippingZone);
@@ -119,7 +137,7 @@ export async function createOrder(input: CreateOrderInput) {
           productId:  item.productId,
           quantity:   item.quantity,
           asKeychain: item.asKeychain,
-          unitPrice:  parseFloat(productMap.get(item.productId)!.price.toString()),
+          unitPrice:  unitPrices.get(item.productId)!,
         })),
       },
       address: { create: input.address },
@@ -136,11 +154,15 @@ export async function createOrder(input: CreateOrderInput) {
     },
   });
 
-  // Incrementar contadores de ventas
+  // Incrementar contadores de ventas y decrementar stock si aplica
   for (const item of input.items) {
+    const product = productMap.get(item.productId)!;
     await prisma.product.update({
       where: { id: item.productId },
-      data:  { soldCount: { increment: item.quantity } },
+      data: {
+        soldCount: { increment: item.quantity },
+        ...(product.stock !== null ? { stock: { decrement: item.quantity } } : {}),
+      },
     });
   }
 

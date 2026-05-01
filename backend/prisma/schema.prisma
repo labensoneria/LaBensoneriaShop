@@ -29,10 +29,12 @@ model User {
 model Product {
   id                    String         @id @default(uuid())
   name                  String
-  description           String
+  description           String?
   price                 Decimal        @db.Decimal(10, 2)
   convertibleToKeychain Boolean        @default(false)
   soldCount             Int            @default(0)
+  stock                 Int?
+  discountPercent       Int?
   active                Boolean        @default(true)
   publishedAt           DateTime       @default(now())
   images                ProductImage[]

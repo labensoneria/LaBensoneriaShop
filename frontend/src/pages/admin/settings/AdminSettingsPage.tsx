@@ -64,6 +64,22 @@ export default function AdminSettingsPage() {
     }
   }
 
+  async function handleSaveGlobalDiscount() {
+    if (!settings) return;
+    setSaving(true);
+    setSaveMsg(null);
+    try {
+      const updated = await updateAdminSettings({ globalDiscountPercent: settings.globalDiscountPercent });
+      setSettings(updated);
+      setSaveMsg('Guardado');
+    } catch (err: unknown) {
+      setSaveMsg(err instanceof Error ? err.message : 'Error');
+    } finally {
+      setSaving(false);
+      setTimeout(() => setSaveMsg(null), 2000);
+    }
+  }
+
   async function handleCreatePopup(e: React.FormEvent) {
     e.preventDefault();
     if (!newContent.trim()) return;
@@ -147,6 +163,35 @@ export default function AdminSettingsPage() {
             />
             <button
               onClick={handleSaveNewProductDays}
+              disabled={saving}
+              className="px-3 py-2 bg-brand-green text-white rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors disabled:opacity-50"
+            >
+              Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <h2 className="font-semibold text-brand-dark mb-4">Descuento global</h2>
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-brand-dark mb-1">Descuento para todos los productos (%)</p>
+            <p className="text-xs text-gray-400">
+              Se aplica a productos sin descuento propio. 0 = sin descuento.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={0}
+              max={99}
+              value={settings.globalDiscountPercent}
+              onChange={(e) => setSettings({ ...settings, globalDiscountPercent: e.target.value })}
+              className="w-20 border border-brand-greenLight rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand-green"
+            />
+            <button
+              onClick={handleSaveGlobalDiscount}
               disabled={saving}
               className="px-3 py-2 bg-brand-green text-white rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors disabled:opacity-50"
             >

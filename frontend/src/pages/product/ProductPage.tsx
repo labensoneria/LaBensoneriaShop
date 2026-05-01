@@ -57,6 +57,9 @@ export default function ProductPage() {
   }
 
   const price = parseFloat(product.price).toFixed(2);
+  const hasDiscount = (product.appliedDiscountPercent ?? 0) > 0;
+  const isOutOfStock = product.stock !== null && product.stock !== undefined && product.stock === 0;
+  const isLowStock = product.stock !== null && product.stock !== undefined && product.stock > 0 && product.stock <= 5;
   const avgStars = product.reviews?.length
     ? product.reviews.reduce((s, r) => s + r.stars, 0) / product.reviews.length
     : null;
@@ -107,11 +110,32 @@ export default function ProductPage() {
             )}
 
             {/* Price tag */}
-            <div className="flex items-baseline gap-1 mb-5">
-              <span className="text-4xl font-extrabold text-brand-green tracking-tight">{price}</span>
-              <span className="text-xl font-semibold text-brand-green/80">&euro;</span>
-            </div>
+            {hasDiscount ? (
+              <div className="flex items-baseline gap-2 mb-3 flex-wrap">
+                <span className="text-lg text-gray-400 line-through">{price}&nbsp;&euro;</span>
+                <span className="text-4xl font-extrabold text-red-500 tracking-tight">{product.effectivePrice}</span>
+                <span className="text-xl font-semibold text-red-500/80">&euro;</span>
+                <span className="text-sm font-semibold bg-red-100 text-red-600 rounded-full px-2 py-0.5">
+                  -{product.appliedDiscountPercent}%
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-baseline gap-1 mb-3">
+                <span className="text-4xl font-extrabold text-brand-green tracking-tight">{price}</span>
+                <span className="text-xl font-semibold text-brand-green/80">&euro;</span>
+              </div>
+            )}
 
+            {isOutOfStock && (
+              <p className="inline-flex items-center gap-1.5 text-sm text-gray-500 bg-gray-100 rounded-full px-3 py-1 mb-4 self-start">
+                No disponible
+              </p>
+            )}
+            {isLowStock && (
+              <p className="inline-flex items-center gap-1.5 text-sm text-brand-sky bg-brand-skyLight/20 rounded-full px-3 py-1 mb-4 self-start">
+                {product.stock} unidad(es) disponibles
+              </p>
+            )}
             {product.convertibleToKeychain && (
               <p className="inline-flex items-center gap-1.5 text-sm text-brand-sky bg-brand-skyLight/20 rounded-full px-3 py-1 mb-4 self-start">
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -145,18 +169,24 @@ export default function ProductPage() {
 
             {/* Anadir al carrito */}
             <button
+              disabled={isOutOfStock}
               onClick={() => {
+                if (isOutOfStock) return;
                 addItem(product, asKeychain);
                 setAdded(true);
                 setTimeout(() => setAdded(false), 2000);
               }}
               className={`mt-auto w-full py-3.5 rounded-xl font-semibold text-white transition-all duration-300 flex items-center justify-center gap-2 ${
-                added
-                  ? 'bg-brand-dark scale-[0.98]'
-                  : 'bg-brand-green hover:bg-brand-dark hover:shadow-lg hover:-translate-y-0.5'
+                isOutOfStock
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : added
+                    ? 'bg-brand-dark scale-[0.98]'
+                    : 'bg-brand-green hover:bg-brand-dark hover:shadow-lg hover:-translate-y-0.5'
               }`}
             >
-              {added ? (
+              {isOutOfStock ? (
+                'No disponible'
+              ) : added ? (
                 <>
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />

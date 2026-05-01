@@ -60,6 +60,7 @@ export default function AdminProductsPage() {
               <tr>
                 <th className="text-left px-4 py-3">Nombre</th>
                 <th className="text-left px-4 py-3">Precio</th>
+                <th className="text-left px-4 py-3">Stock</th>
                 <th className="text-left px-4 py-3">Visible</th>
                 <th className="text-left px-4 py-3">Acciones</th>
               </tr>
@@ -69,6 +70,12 @@ export default function AdminProductsPage() {
                 <tr key={p.id} className={p.active ? '' : 'opacity-50'}>
                   <td className="px-4 py-3 font-medium text-brand-dark">{p.name}</td>
                   <td className="px-4 py-3">{parseFloat(p.price).toFixed(2)} €</td>
+                  <td className="px-4 py-3">
+                    {p.stock === null || p.stock === undefined
+                      ? <span className="text-gray-400">—</span>
+                      : <span className={p.stock === 0 ? 'text-red-500 font-semibold' : 'text-brand-dark'}>{p.stock}</span>
+                    }
+                  </td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => handleToggleActive(p.id, p.active)}

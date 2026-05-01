@@ -18,10 +18,14 @@ export interface Review {
 export interface Product {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   price: string; // Decimal comes as string from JSON
   convertibleToKeychain: boolean;
   soldCount: number;
+  stock: number | null;
+  discountPercent: number | null;
+  effectivePrice: string;           // computed by backend
+  appliedDiscountPercent: number | null; // null if no discount applies
   active: boolean;
   publishedAt: string;
   images: ProductImage[];
@@ -47,6 +51,7 @@ export interface CartItem {
   imageUrl?: string;
   quantity:  number;
   asKeychain: boolean;
+  stock:     number | null;
 }
 
 // ── Pedidos ──────────────────────────────────────────────────────────────────
@@ -64,6 +69,7 @@ export interface OrderItemDetail {
   product: {
     name:   string;
     images: { cloudinaryUrl: string }[];
+    stock?: number | null;
   };
 }
 

@@ -1,11 +1,12 @@
 import prisma from '../utils/prisma';
 
 const DEFAULTS: Record<string, string> = {
-  ordersEnabled:  'true',
-  newProductDays: '14',
+  ordersEnabled:         'true',
+  newProductDays:        '14',
+  globalDiscountPercent: '0',
 };
 
-const ALLOWED_KEYS = new Set(['ordersEnabled', 'newProductDays']);
+const ALLOWED_KEYS = new Set(['ordersEnabled', 'newProductDays', 'globalDiscountPercent']);
 
 export async function getSettings(): Promise<Record<string, string>> {
   const rows = await prisma.appSettings.findMany({

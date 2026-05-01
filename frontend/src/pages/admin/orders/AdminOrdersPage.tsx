@@ -46,7 +46,20 @@ export default function AdminOrdersPage() {
   async function handleStatusChange(order: Order, status: OrderStatus) {
     setUpdating(order.id);
     try {
-      const updated = await updateOrderStatus(order.id, status);
+      // Ask admin if they want to replenish stock for items that have stock tracking
+      const stockItems = order.items.filter((item) => item.product.stock !== null && item.product.stock !== undefined);
+      const replenishStock: Record<string, number> = {};
+      for (const item of stockItems) {
+        if (window.confirm(`¿Reponer stock de "${item.product.name}" (+${item.quantity})?`)) {
+          replenishStock[item.productId] = item.quantity;
+        }
+      }
+
+      const updated = await updateOrderStatus(
+        order.id,
+        status,
+        Object.keys(replenishStock).length > 0 ? replenishStock : undefined
+      );
       setData((prev) =>
         prev
           ? {
