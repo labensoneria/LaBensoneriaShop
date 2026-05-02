@@ -12,7 +12,12 @@ async function send(payload: Parameters<typeof resend.emails.send>[0]): Promise<
     console.log('[email:dev] Would send email:', JSON.stringify({ to: payload.to, subject: payload.subject }, null, 2));
     return;
   }
-  await resend.emails.send(payload);
+  const { data, error } = await resend.emails.send(payload);
+  if (error) {
+    console.error('[email] Resend error:', error, 'payload:', { from: payload.from, to: payload.to, subject: payload.subject });
+    throw new Error(`Resend failed: ${error.message ?? JSON.stringify(error)}`);
+  }
+  console.log('[email] Sent:', { id: data?.id, to: payload.to, subject: payload.subject });
 }
 
 // ─── Order Confirmation ───────────────────────────────────────────────────────
