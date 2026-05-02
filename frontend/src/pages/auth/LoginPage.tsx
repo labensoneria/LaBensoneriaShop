@@ -74,6 +74,13 @@ export default function LoginPage() {
           >
             {submitting ? 'Entrando...' : 'Entrar'}
           </button>
+
+          <Link
+            to="/olvide-contrasena"
+            className="text-sm text-[#9B8E8E] hover:text-brand-green transition-colors"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
         </form>
 
         <div className="bg-[#e8f0eb] px-4 py-4 text-center text-base">

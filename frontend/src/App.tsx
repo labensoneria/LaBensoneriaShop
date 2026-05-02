@@ -7,6 +7,8 @@ import CheckoutPage from './pages/checkout/CheckoutPage';
 import OrderConfirmationPage from './pages/order/OrderConfirmationPage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import ProfilePage from './pages/profile/ProfilePage';
 import MyOrdersPage from './pages/orders/MyOrdersPage';
 import AdminLoginPage from './pages/admin/LoginPage';
@@ -38,6 +40,8 @@ export default function App() {
         {/* Auth pública (sin header de tienda) */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/registro" element={<RegisterPage />} />
+        <Route path="/olvide-contrasena" element={<ForgotPasswordPage />} />
+        <Route path="/restablecer-contrasena" element={<ResetPasswordPage />} />
 
         {/* Admin */}
         <Route path="/admin/login" element={<AdminLoginPage />} />
