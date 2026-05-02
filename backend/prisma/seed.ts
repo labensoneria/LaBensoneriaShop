@@ -21,9 +21,9 @@ async function main() {
   const defaultSettings: { key: string; value: string }[] = [
     { key: 'ordersEnabled',         value: 'true' },
     { key: 'newProductDays',        value: '14' },
-    { key: 'shipping_peninsular',   value: '4.95' },
-    { key: 'shipping_baleares',     value: '7.95' },
-    { key: 'shipping_canarias',     value: '12.00' },
+    { key: 'shipping_peninsular',   value: '5.92' },
+    { key: 'shipping_baleares',     value: '7.55' },
+    { key: 'shipping_canarias',     value: '11.37' },
     { key: 'shipping_international',value: '20.00' },
   ];
 

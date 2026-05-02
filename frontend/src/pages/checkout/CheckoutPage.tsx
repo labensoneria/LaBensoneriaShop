@@ -6,14 +6,20 @@ import { getShippingRates, createOrder } from '../../api/orders';
 import { createStripeCheckoutSession } from '../../api/payments';
 import type { ShippingZone, ShippingRates } from '../../types';
 
+type SpainSubzone = 'peninsular' | 'baleares' | 'canarias';
+
 const ZONE_LABELS: Record<ShippingZone, string> = {
-  peninsular:    'España peninsular y Portugal',
+  peninsular:    'España peninsular',
   baleares:      'Islas Baleares',
   canarias:      'Islas Canarias, Ceuta y Melilla',
-  international: 'Internacional',
+  international: 'Internacional (UE)',
 };
 
-const ZONES = Object.keys(ZONE_LABELS) as ShippingZone[];
+function deriveZone(country: string, subzone: SpainSubzone): ShippingZone {
+  if (!country) return 'peninsular';
+  if (country === 'España') return subzone;
+  return 'international';
+}
 
 export default function CheckoutPage() {
   const navigate  = useNavigate();
@@ -23,13 +29,12 @@ export default function CheckoutPage() {
   const { user }  = useAuthStore();
 
   const [rates, setRates]   = useState<ShippingRates | null>(null);
-  const [zone, setZone]     = useState<ShippingZone>('peninsular');
+  const [spainSubzone, setSpainSubzone] = useState<SpainSubzone>('peninsular');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]   = useState<string | null>(null);
   const [saveAddress, setSaveAddress] = useState(false);
   const orderPlaced = useRef(false);
 
-  // Mensaje cuando el usuario vuelve desde Stripe con "cancelado"
   const cancelado = searchParams.get('cancelado') === 'true';
 
   const [form, setForm] = useState({
@@ -51,6 +56,7 @@ export default function CheckoutPage() {
     getShippingRates().then(setRates).catch(() => null);
   }, [items.length, navigate]);
 
+  const zone = deriveZone(form.country, spainSubzone);
   const shippingCost = rates ? rates[zone] : null;
   const total = shippingCost !== null ? subtotal + shippingCost : null;
 
@@ -63,7 +69,6 @@ export default function CheckoutPage() {
     setError(null);
     setSubmitting(true);
     try {
-      // 1. Crear el pedido en estado PENDING
       const order = await createOrder({
         items: items.map((i) => ({
           productId:  i.productId,
@@ -84,10 +89,8 @@ export default function CheckoutPage() {
         },
       });
 
-      // 2. Crear sesión de Stripe Checkout
       const { sessionUrl } = await createStripeCheckoutSession(order.id);
 
-      // 3. Vaciar el carrito y redirigir a Stripe
       orderPlaced.current = true;
       clear();
       window.location.href = sessionUrl;
@@ -199,15 +202,72 @@ export default function CheckoutPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-brand-dark mb-1">País</label>
-                <input
-                  type="text"
+                <select
                   name="country"
                   required
                   value={form.country}
                   onChange={handleChange}
-                  className="w-full border border-brand-greenLight rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-green"
-                />
+                  className="w-full border border-brand-greenLight rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-green bg-white"
+                >
+                  <option value="">Selecciona un país</option>
+                  <option value="Alemania">Alemania</option>
+                  <option value="Austria">Austria</option>
+                  <option value="Bélgica">Bélgica</option>
+                  <option value="Bulgaria">Bulgaria</option>
+                  <option value="Chipre">Chipre</option>
+                  <option value="Croacia">Croacia</option>
+                  <option value="Dinamarca">Dinamarca</option>
+                  <option value="Eslovaquia">Eslovaquia</option>
+                  <option value="Eslovenia">Eslovenia</option>
+                  <option value="España">España</option>
+                  <option value="Estonia">Estonia</option>
+                  <option value="Finlandia">Finlandia</option>
+                  <option value="Francia">Francia</option>
+                  <option value="Grecia">Grecia</option>
+                  <option value="Hungría">Hungría</option>
+                  <option value="Irlanda">Irlanda</option>
+                  <option value="Italia">Italia</option>
+                  <option value="Letonia">Letonia</option>
+                  <option value="Lituania">Lituania</option>
+                  <option value="Luxemburgo">Luxemburgo</option>
+                  <option value="Malta">Malta</option>
+                  <option value="Países Bajos">Países Bajos</option>
+                  <option value="Polonia">Polonia</option>
+                  <option value="Portugal">Portugal</option>
+                  <option value="República Checa">República Checa</option>
+                  <option value="Rumanía">Rumanía</option>
+                  <option value="Suecia">Suecia</option>
+                </select>
               </div>
+
+              {/* Subzona España */}
+              {form.country === 'España' && (
+                <div className="flex flex-col gap-2 pt-1">
+                  <p className="text-sm font-medium text-brand-dark">¿Dónde te enviamos?</p>
+                  {(
+                    [
+                      { value: 'peninsular', label: 'Península y Portugal' },
+                      { value: 'baleares',   label: 'Islas Baleares' },
+                      { value: 'canarias',   label: 'Islas Canarias, Ceuta y Melilla' },
+                    ] as { value: SpainSubzone; label: string }[]
+                  ).map(({ value, label }) => (
+                    <label key={value} className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="radio"
+                        name="spainSubzone"
+                        value={value}
+                        checked={spainSubzone === value}
+                        onChange={() => setSpainSubzone(value)}
+                        className="w-4 h-4 accent-brand-green"
+                      />
+                      <span className="text-sm text-brand-dark">
+                        {label}
+                        {rates ? ` — ${rates[value].toFixed(2)} €` : ''}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
 
               {/* Checkbox guardar dirección — solo para usuarios autenticados */}
               {user && (
@@ -227,20 +287,19 @@ export default function CheckoutPage() {
 
         {/* Resumen del pedido */}
         <div className="flex flex-col gap-6">
-          {/* Zona de envío */}
+          {/* Zona de envío (solo lectura) */}
           <section className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-lg font-bold text-brand-dark mb-4">Zona de envío</h2>
-            <select
-              value={zone}
-              onChange={(e) => setZone(e.target.value as ShippingZone)}
-              className="w-full border border-brand-greenLight rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-green"
-            >
-              {ZONES.map((z) => (
-                <option key={z} value={z}>
-                  {ZONE_LABELS[z]}{rates ? ` — ${rates[z].toFixed(2)} €` : ''}
-                </option>
-              ))}
-            </select>
+            <h2 className="text-lg font-bold text-brand-dark mb-3">Zona de envío</h2>
+            {form.country ? (
+              <p className="text-sm text-brand-dark">
+                {ZONE_LABELS[zone]}
+                {shippingCost !== null && (
+                  <span className="ml-1 font-semibold">&mdash; {shippingCost.toFixed(2)} €</span>
+                )}
+              </p>
+            ) : (
+              <p className="text-sm text-gray-400">Selecciona un país para calcular el envío</p>
+            )}
           </section>
 
           {/* Resumen */}
@@ -293,7 +352,7 @@ export default function CheckoutPage() {
 
           <button
             type="submit"
-            disabled={submitting || !rates}
+            disabled={submitting || !rates || !form.country}
             className="w-full bg-brand-green text-white py-3 rounded-xl font-semibold hover:bg-brand-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? 'Redirigiendo a Stripe...' : 'Pagar con tarjeta'}
