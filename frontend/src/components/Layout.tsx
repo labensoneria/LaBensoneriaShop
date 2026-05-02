@@ -34,9 +34,9 @@ export default function Layout() {
       {/* Green accent top bar */}
       <div className="h-1 bg-gradient-to-r from-brand-green via-brand-sky to-brand-greenLight" />
       <header className="bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 py-1.5 sm:py-3 flex items-center justify-between">
           <Link to="/productos" className="shrink-0" aria-label="La Bensoneria">
-            <img src="/img/logoWeb.png" alt="La Bensoneria" className="h-20 w-auto" />
+            <img src="/img/logoWeb.png" alt="La Bensoneria" className="h-14 w-auto sm:h-20" />
           </Link>
 
           <div className="flex items-center gap-2">

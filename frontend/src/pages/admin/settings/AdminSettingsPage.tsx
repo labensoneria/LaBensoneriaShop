@@ -80,6 +80,27 @@ export default function AdminSettingsPage() {
     }
   }
 
+  async function handleSaveShipping() {
+    if (!settings) return;
+    setSaving(true);
+    setSaveMsg(null);
+    try {
+      const updated = await updateAdminSettings({
+        shipping_peninsular:    settings.shipping_peninsular,
+        shipping_baleares:      settings.shipping_baleares,
+        shipping_canarias:      settings.shipping_canarias,
+        shipping_international: settings.shipping_international,
+      });
+      setSettings(updated);
+      setSaveMsg('Guardado');
+    } catch (err: unknown) {
+      setSaveMsg(err instanceof Error ? err.message : 'Error');
+    } finally {
+      setSaving(false);
+      setTimeout(() => setSaveMsg(null), 2000);
+    }
+  }
+
   async function handleCreatePopup(e: React.FormEvent) {
     e.preventDefault();
     if (!newContent.trim()) return;
@@ -196,6 +217,41 @@ export default function AdminSettingsPage() {
               className="px-3 py-2 bg-brand-green text-white rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors disabled:opacity-50"
             >
               Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <h2 className="font-semibold text-brand-dark mb-4">Tarifas de envío (€)</h2>
+        <div className="flex flex-col gap-3">
+          {(
+            [
+              { key: 'shipping_peninsular',    label: 'Península' },
+              { key: 'shipping_baleares',       label: 'Islas Baleares' },
+              { key: 'shipping_canarias',       label: 'Islas Canarias, Ceuta y Melilla' },
+              { key: 'shipping_international',  label: 'Internacional (UE)' },
+            ] as { key: keyof typeof settings; label: string }[]
+          ).map(({ key, label }) => (
+            <div key={key} className="flex items-center justify-between gap-4">
+              <span className="text-sm text-brand-dark">{label}</span>
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                value={settings[key]}
+                onChange={(e) => setSettings({ ...settings, [key]: e.target.value })}
+                className="w-24 border border-brand-greenLight rounded-lg px-3 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-brand-green"
+              />
+            </div>
+          ))}
+          <div className="flex justify-end mt-1">
+            <button
+              onClick={handleSaveShipping}
+              disabled={saving}
+              className="px-3 py-2 bg-brand-green text-white rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors disabled:opacity-50"
+            >
+              Guardar tarifas
             </button>
           </div>
         </div>

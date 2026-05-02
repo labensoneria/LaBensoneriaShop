@@ -1,9 +1,13 @@
 import { apiFetch } from './client';
 
 export interface AppSettingsMap {
-  ordersEnabled:         string;
-  newProductDays:        string;
-  globalDiscountPercent: string;
+  ordersEnabled:          string;
+  newProductDays:         string;
+  globalDiscountPercent:  string;
+  shipping_peninsular:    string;
+  shipping_baleares:      string;
+  shipping_canarias:      string;
+  shipping_international: string;
 }
 
 export function getNewProductDays() {
