@@ -1,4 +1,7 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { getMe } from './api/auth';
+import { useAuthStore } from './store/authStore';
 import Layout from './components/Layout';
 import CatalogPage from './pages/catalog/CatalogPage';
 import ProductPage from './pages/product/ProductPage';
@@ -21,6 +24,13 @@ import AdminSettingsPage from './pages/admin/settings/AdminSettingsPage';
 import FaqPage from './pages/faq/FaqPage';
 
 export default function App() {
+  const { token, logout } = useAuthStore();
+
+  useEffect(() => {
+    if (!token) return;
+    getMe().catch(() => logout());
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <BrowserRouter>
       <Routes>
