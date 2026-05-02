@@ -11,6 +11,13 @@ const SHIPPING_KEYS: Record<ShippingZone, string> = {
   international: 'shipping_international',
 };
 
+const SHIPPING_DEFAULTS: Record<ShippingZone, number> = {
+  peninsular:    5.92,
+  baleares:      7.55,
+  canarias:      11.37,
+  international: 20.00,
+};
+
 export const SHIPPING_ZONE_LABELS: Record<ShippingZone, string> = {
   peninsular:    'España peninsular y Portugal',
   baleares:      'Islas Baleares',
@@ -30,8 +37,7 @@ async function getShippingCost(zone: ShippingZone): Promise<number> {
   const setting = await prisma.appSettings.findUnique({
     where: { key: SHIPPING_KEYS[zone] },
   });
-  if (!setting) throw new AppError('Zona de envío no configurada', 500);
-  return parseFloat(setting.value);
+  return setting ? parseFloat(setting.value) : SHIPPING_DEFAULTS[zone];
 }
 
 export async function getShippingRates(): Promise<Record<ShippingZone, number>> {
@@ -39,10 +45,10 @@ export async function getShippingRates(): Promise<Record<ShippingZone, number>> 
   const settings = await prisma.appSettings.findMany({ where: { key: { in: keys } } });
   const map = Object.fromEntries(settings.map((s) => [s.key, parseFloat(s.value)]));
   return {
-    peninsular:    map[SHIPPING_KEYS.peninsular]    ?? 4.95,
-    baleares:      map[SHIPPING_KEYS.baleares]      ?? 7.95,
-    canarias:      map[SHIPPING_KEYS.canarias]      ?? 12.00,
-    international: map[SHIPPING_KEYS.international] ?? 20.00,
+    peninsular:    map[SHIPPING_KEYS.peninsular]    ?? SHIPPING_DEFAULTS.peninsular,
+    baleares:      map[SHIPPING_KEYS.baleares]      ?? SHIPPING_DEFAULTS.baleares,
+    canarias:      map[SHIPPING_KEYS.canarias]      ?? SHIPPING_DEFAULTS.canarias,
+    international: map[SHIPPING_KEYS.international] ?? SHIPPING_DEFAULTS.international,
   };
 }
 

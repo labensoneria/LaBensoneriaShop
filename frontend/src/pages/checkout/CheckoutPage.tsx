@@ -116,6 +116,7 @@ export default function CheckoutPage() {
                 <input
                   type="text"
                   name="guestName"
+                  autoComplete="name"
                   required
                   value={form.guestName}
                   onChange={handleChange}
@@ -127,6 +128,7 @@ export default function CheckoutPage() {
                 <input
                   type="email"
                   name="guestEmail"
+                  autoComplete="email"
                   required
                   value={form.guestEmail}
                   onChange={handleChange}
@@ -145,6 +147,7 @@ export default function CheckoutPage() {
                 <input
                   type="text"
                   name="addrName"
+                  autoComplete="name"
                   required
                   value={form.addrName}
                   onChange={handleChange}
@@ -156,6 +159,7 @@ export default function CheckoutPage() {
                 <input
                   type="text"
                   name="street"
+                  autoComplete="address-line1"
                   required
                   value={form.street}
                   onChange={handleChange}
@@ -170,6 +174,7 @@ export default function CheckoutPage() {
                 <input
                   type="text"
                   name="street2"
+                  autoComplete="address-line2"
                   value={form.street2}
                   onChange={handleChange}
                   placeholder="Ej: 3º izquierda, escalera B"
@@ -182,6 +187,7 @@ export default function CheckoutPage() {
                   <input
                     type="text"
                     name="city"
+                    autoComplete="address-level2"
                     required
                     value={form.city}
                     onChange={handleChange}
@@ -193,6 +199,7 @@ export default function CheckoutPage() {
                   <input
                     type="text"
                     name="postalCode"
+                    autoComplete="postal-code"
                     required
                     value={form.postalCode}
                     onChange={handleChange}
