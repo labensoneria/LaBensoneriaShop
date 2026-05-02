@@ -127,6 +127,72 @@ export async function sendOrderConfirmation(orderId: string): Promise<void> {
   });
 }
 
+// ─── Order Shipped ────────────────────────────────────────────────────────────
+
+export async function sendOrderShipped(orderId: string): Promise<void> {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      address: true,
+      user:    { select: { email: true, name: true } },
+    },
+  });
+
+  if (!order) return;
+
+  const recipientEmail = order.user?.email ?? order.guestEmail;
+  const recipientName  = order.user?.name  ?? order.guestName ?? 'Cliente';
+  if (!recipientEmail) return;
+
+  const orderUrl = `${FRONTEND_URL}/pedido/${order.id}`;
+
+  const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /></head>
+<body style="margin:0;padding:0;background:#FAF7F0;font-family:Georgia,serif;color:#2C3E2D;">
+  <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+
+    ${BANNER_HTML}
+
+    <div style="padding:32px 40px;">
+      <h2 style="margin:0 0 8px;font-size:18px;color:#2C3E2D;">¡Tu pedido está en camino, ${recipientName}!</h2>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.6;">
+        Hemos enviado tu pedido <strong>#${order.id.slice(0, 8).toUpperCase()}</strong>. Llegará en los próximos días.
+      </p>
+
+      ${order.address ? `
+      <div style="margin:0 0 24px;padding:16px;background:#FAF7F0;border-radius:6px;font-size:13px;line-height:1.7;">
+        <strong style="color:#4A7C59;">Dirección de entrega</strong><br />
+        ${order.address.name}<br />
+        ${order.address.street}${order.address.street2 ? ', ' + order.address.street2 : ''}<br />
+        ${order.address.postalCode} ${order.address.city}<br />
+        ${order.address.country}
+      </div>` : ''}
+
+      <div style="margin:28px 0 0;text-align:center;">
+        <a href="${orderUrl}" style="display:inline-block;background:#4A7C59;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:6px;font-size:14px;letter-spacing:.3px;">
+          Ver mi pedido
+        </a>
+      </div>
+    </div>
+
+    <div style="padding:20px 40px;border-top:1px solid #e8e4da;font-size:12px;color:#999;text-align:center;">
+      La Bensonería · labensoneria.xyz<br />
+      Si tienes alguna duda, responde a este correo.
+    </div>
+  </div>
+</body>
+</html>`;
+
+  await send({
+    from:    FROM,
+    to:      recipientEmail,
+    subject: `Tu pedido #${order.id.slice(0, 8).toUpperCase()} está en camino`,
+    html,
+  });
+}
+
 // ─── Password Reset ───────────────────────────────────────────────────────────
 
 export async function sendPasswordResetEmail(email: string, resetUrl: string): Promise<void> {

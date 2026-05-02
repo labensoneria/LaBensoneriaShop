@@ -1,6 +1,7 @@
 import { OrderStatus } from '@prisma/client';
 import prisma from '../utils/prisma';
 import { AppError } from '../utils/AppError';
+import { sendOrderShipped } from './email.service';
 
 export async function listOrders(page = 1, limit = 20, status?: OrderStatus) {
   const skip  = (page - 1) * limit;
@@ -39,6 +40,12 @@ export async function updateOrderStatus(
       address: true,
     },
   });
+
+  if (status === 'SHIPPED' && order.status !== 'SHIPPED') {
+    sendOrderShipped(id).catch((err) =>
+      console.error('[email] Order shipped failed:', err),
+    );
+  }
 
   if (replenishStock) {
     for (const [productId, qty] of Object.entries(replenishStock)) {
