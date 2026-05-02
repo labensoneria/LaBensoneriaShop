@@ -2,7 +2,7 @@ import { Resend } from 'resend';
 import prisma from '../utils/prisma';
 
 const resend = new Resend(process.env.RESEND_API_KEY ?? 're_dev_placeholder');
-const FROM        = process.env.RESEND_FROM_EMAIL ?? 'La Bensonería <noreply@labensoneria.xyz>';
+const FROM        = process.env.RESEND_FROM_EMAIL ?? 'noreply@labensoneria.xyz';
 const DEV         = process.env.NODE_ENV !== 'production';
 const FRONTEND_URL = process.env.FRONTEND_URL ?? 'https://labensoneria.xyz';
 const BANNER_HTML  = `<a href="${FRONTEND_URL}" style="display:block;"><img src="${FRONTEND_URL}/img/Top_Page.jpg" alt="La Bensonería" width="560" style="display:block;width:100%;max-width:560px;border:0;" /></a>`;
