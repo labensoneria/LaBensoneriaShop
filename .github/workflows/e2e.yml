@@ -1,0 +1,184 @@
+name: e2e
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'e2e/**'
+      - '.github/workflows/e2e.yml'
+  push:
+    branches: [master, main]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'e2e/**'
+      - '.github/workflows/e2e.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER:     test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB:       labensoneria_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U test -d labensoneria_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # --- Mocks: all external paid services are short-circuited in CI ---
+      MOCK_PACKLINK:   'true'
+      MOCK_STRIPE:     'true'
+      # NODE_ENV stays unset → email.service.ts logs instead of calling Resend
+      CI:              'true'
+
+      # --- Backend ---
+      DATABASE_URL:    postgresql://test:test@localhost:5432/labensoneria_test
+      JWT_SECRET:      e2e-test-secret-not-for-prod
+      JWT_EXPIRES_IN:  7d
+      PORT:            '3000'
+      FRONTEND_URL:    http://localhost:5173
+      CORS_ORIGINS:    http://localhost:5173
+
+      # --- Stripe & Packlink: dummies, never called because of MOCK_* ---
+      STRIPE_SECRET_KEY:     sk_test_dummy_not_used
+      STRIPE_WEBHOOK_SECRET: whsec_dummy_not_used
+      PACKLINK_API_KEY:      pl_dummy_not_used
+      PACKLINK_API_URL:      http://localhost-not-called.invalid
+
+      # --- Cloudinary: dummies; admin upload paths are not exercised in e2e ---
+      CLOUDINARY_CLOUD_NAME: dummy
+      CLOUDINARY_API_KEY:    dummy
+      CLOUDINARY_API_SECRET: dummy
+
+      # --- Shipper info (required by packlink env validation) ---
+      SHIPPER_NAME:    "La Bensonería"
+      SHIPPER_STREET:  "Calle Falsa 1"
+      SHIPPER_CITY:    "Madrid"
+      SHIPPER_ZIP:     "28001"
+      SHIPPER_COUNTRY: ES
+      SHIPPER_PHONE:   "+34000000000"
+      SHIPPER_EMAIL:   noreply@labensoneria.test
+
+      # --- Admin seed credentials (also used by admin.spec.ts) ---
+      ADMIN_EMAIL:    admin@labensoneria.com
+      ADMIN_PASSWORD: admin_dev_password
+      E2E_ADMIN_EMAIL:    admin@labensoneria.com
+      E2E_ADMIN_PASSWORD: admin_dev_password
+
+      # --- Frontend build-time ---
+      VITE_API_URL: http://localhost:3000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      # ---------- Backend ----------
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Generate Prisma client & migrate
+        working-directory: backend
+        run: |
+          npx prisma generate
+          npx prisma migrate deploy
+
+      - name: Seed database
+        working-directory: backend
+        run: npx ts-node prisma/seed.ts
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Start backend
+        working-directory: backend
+        run: |
+          npm start > backend.log 2>&1 &
+          echo $! > backend.pid
+
+      # ---------- Frontend ----------
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Start frontend (vite preview)
+        working-directory: frontend
+        run: |
+          npx vite preview --port 5173 --host 127.0.0.1 > frontend.log 2>&1 &
+          echo $! > frontend.pid
+
+      # ---------- E2E ----------
+      - name: Install e2e deps
+        working-directory: e2e
+        run: npm ci || npm install
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('e2e/package-lock.json', 'e2e/package.json') }}
+
+      - name: Install Playwright (chromium only)
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Wait for backend + frontend
+        run: |
+          npx --yes wait-on \
+            http://localhost:3000/health \
+            http://localhost:5173 \
+            --timeout 60000
+
+      - name: Run Playwright tests
+        working-directory: e2e
+        env:
+          E2E_FRONTEND_URL: http://localhost:5173
+        run: npm test
+
+      # ---------- Diagnostics on failure ----------
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload server logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-logs
+          path: |
+            backend/backend.log
+            frontend/frontend.log
+          if-no-files-found: ignore
+          retention-days: 7

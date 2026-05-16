@@ -2,6 +2,11 @@ import { AppError } from '../utils/AppError';
 
 const BASE = process.env.PACKLINK_API_URL ?? 'https://api.packlink.com';
 const VAT  = parseFloat(process.env.SHIPPING_VAT_MULTIPLIER ?? '1.21');
+const MOCK = process.env.MOCK_PACKLINK === 'true';
+if (MOCK && process.env.NODE_ENV === 'production') {
+  throw new Error('MOCK_PACKLINK must not be enabled in production');
+}
+if (MOCK) console.log('[packlink] MOCK MODE — no real API calls will be made');
 
 const SHIPPER = {
   name:    process.env.SHIPPER_NAME    ?? 'La Bensonería',
@@ -91,6 +96,20 @@ export async function quoteShipping(params: {
   toZip:     string;
   packages:  Package[];
 }): Promise<{ home: QuotedService[]; pickup: QuotedService[] }> {
+  if (MOCK) {
+    return {
+      home: [{
+        serviceId: 99001, carrierId: 'MOCK', carrierName: 'MockCarrier',
+        serviceName: 'Mock Home Delivery', priceBase: 4.50, priceTotal: 5.45,
+        transitDays: 2, dropoff: false,
+      }],
+      pickup: [{
+        serviceId: 99002, carrierId: 'MOCK', carrierName: 'MockCarrier',
+        serviceName: 'Mock Pickup Point', priceBase: 3.50, priceTotal: 4.24,
+        transitDays: 3, dropoff: true,
+      }],
+    };
+  }
   const q = new URLSearchParams();
   q.set('from[country]', SHIPPER.country);
   q.set('from[zip]',     SHIPPER.zip);
@@ -137,6 +156,12 @@ export async function quoteShipping(params: {
 }
 
 export async function getPickupPoints(carrierId: string, country: string, zip: string): Promise<PickupPoint[]> {
+  if (MOCK) {
+    return [
+      { id: 'MOCK_POINT_1', name: 'Mock Locker (centro)', address: 'Calle Falsa 123', city: 'Madrid', zip },
+      { id: 'MOCK_POINT_2', name: 'Mock Locker (norte)',  address: 'Avenida Falsa 456', city: 'Madrid', zip },
+    ];
+  }
   console.log(`[packlink] getPickupPoints carrierId="${carrierId}" country="${country}" zip="${zip}"`);
   const raw = await call<any[]>(`/v1/dropoffs/${encodeURIComponent(carrierId)}/${encodeURIComponent(country)}/${encodeURIComponent(zip)}`, { method: 'GET' });
   return (raw ?? []).map((p: any) => ({
@@ -169,6 +194,14 @@ export async function createShipment(
   order: OrderLike,
   opts: { serviceId: number; pickupPointId?: string },
 ): Promise<{ reference: string; trackingNumber?: string; trackingUrl?: string; labelUrl?: string }> {
+  if (MOCK) {
+    return {
+      reference:      `MOCK_REF_${order.id}`,
+      trackingNumber: `MOCKTRK${Date.now()}`,
+      trackingUrl:    'https://example.com/mock-tracking',
+      labelUrl:       'https://example.com/mock-label.pdf',
+    };
+  }
   if (!order.address) throw new PacklinkError('Order missing address', 400);
 
   const pkg = buildPackage(
@@ -226,12 +259,20 @@ export async function createShipment(
 }
 
 export async function payShipment(reference: string): Promise<void> {
+  if (MOCK) return;
   await call<unknown>(`/v1/shipments/${encodeURIComponent(reference)}/payment`, { method: 'POST' });
 }
 
 export async function getShipment(reference: string): Promise<{
   trackingNumber?: string; trackingUrl?: string; labelUrl?: string;
 }> {
+  if (MOCK) {
+    return {
+      trackingNumber: `MOCKTRK_${reference}`,
+      trackingUrl:    'https://example.com/mock-tracking',
+      labelUrl:       'https://example.com/mock-label.pdf',
+    };
+  }
   const raw = await call<any>(`/v1/shipments/${encodeURIComponent(reference)}`, { method: 'GET' });
   return {
     trackingNumber: raw.tracking_codes?.[0] ?? raw.tracking_number ?? undefined,

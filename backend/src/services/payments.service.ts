@@ -3,9 +3,15 @@ import prisma from '../utils/prisma';
 import { AppError } from '../utils/AppError';
 import { sendOrderConfirmation } from './email.service';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2026-03-25.dahlia',
-});
+const MOCK = process.env.MOCK_STRIPE === 'true';
+if (MOCK && process.env.NODE_ENV === 'production') {
+  throw new Error('MOCK_STRIPE must not be enabled in production');
+}
+if (MOCK) console.log('[stripe] MOCK MODE — orders will be marked PAID without real payment');
+
+const stripe = MOCK
+  ? (null as unknown as Stripe)
+  : new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-03-25.dahlia' });
 
 export async function createCheckoutSession(orderId: string) {
   const order = await prisma.order.findUnique({
@@ -21,6 +27,22 @@ export async function createCheckoutSession(orderId: string) {
   if (order.paymentStatus === 'PAID') throw new AppError('Este pedido ya está pagado', 400);
 
   const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+
+  if (MOCK) {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        paymentStatus:         'PAID',
+        status:                'PROCESSING',
+        paymentProvider:       'mock',
+        stripeCheckoutSessionId: `mock_cs_${orderId}`,
+        paidAt:                new Date(),
+        paymentCurrency:       'eur',
+        paymentAmount:         parseFloat(order.total.toString()),
+      },
+    });
+    return { sessionUrl: `${frontendUrl}/pedido/${orderId}?pagado=true` };
+  }
 
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
@@ -60,6 +82,7 @@ export async function createCheckoutSession(orderId: string) {
 }
 
 export async function handleWebhook(rawBody: Buffer, signature: string) {
+  if (MOCK) return; // mock mode already marked the order paid in createCheckoutSession
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
   let event: Stripe.Event;
