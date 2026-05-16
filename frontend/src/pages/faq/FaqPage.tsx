@@ -26,15 +26,18 @@ const faqs: FaqItem[] = [
     question: '¿Cuánto tarda en llegar una vez enviado?',
     answer: (
       <>
-        <p>Los envíos se realizan a través de <span className="font-medium">Correos</span>. Una vez que tu pedido sale de mis manos, los tiempos orientativos son:</p>
+        <p>
+          Depende del transportista que elijas al finalizar tu pedido. Al introducir tu dirección en el checkout
+          verás las opciones disponibles con sus plazos estimados. A modo orientativo:
+        </p>
         <ul className="mt-2 space-y-1 list-disc list-inside">
-          <li><span className="font-medium">Península y Baleares:</span> 48–72 horas hábiles.</li>
-          <li><span className="font-medium">Canarias:</span> aproximadamente 7–10 días hábiles (incluye tramitación aduanera).</li>
-          <li><span className="font-medium">Ceuta y Melilla:</span> aproximadamente 8–11 días hábiles (incluye tramitación aduanera).</li>
+          <li><span className="font-medium">España peninsular y Baleares:</span> 1–3 días hábiles.</li>
+          <li><span className="font-medium">Canarias, Ceuta y Melilla:</span> 5–10 días hábiles (puede incluir tramitación aduanera).</li>
+          <li><span className="font-medium">Europa:</span> 3–7 días hábiles según el país y transportista.</li>
         </ul>
         <p className="mt-2 text-brand-dark/60 text-sm">
-          Estos plazos son los habituales de Correos y pueden verse afectados por épocas de alta demanda (Navidad,
-          rebajas, etc.). Te envío el número de seguimiento en cuanto lo tenga para que puedas rastrear tu paquete.
+          En cuanto tu pedido salga, te envío por correo el número de seguimiento para que puedas rastrearlo
+          en todo momento. Los plazos pueden verse afectados en épocas de alta demanda (Navidad, etc.).
         </p>
       </>
     ),
@@ -42,14 +45,21 @@ const faqs: FaqItem[] = [
   {
     question: '¿A dónde hacéis envíos?',
     answer: (
-      <p>
-        ¡A toda España! Península, Baleares, Canarias, Ceuta y Melilla. Si estás fuera de España y te encapricha
-        algo, escríbeme a{' '}
-        <a href="mailto:lunekoshop@gmail.com" className="text-brand-green hover:underline">
-          lunekoshop@gmail.com
-        </a>{' '}
-        y lo miramos juntos.
-      </p>
+      <>
+        <p>
+          Envío a <span className="font-medium">España y a la mayoría de países de Europa</span>: Francia,
+          Alemania, Portugal, Italia, Países Bajos, Bélgica, Austria, Polonia y muchos más.
+        </p>
+        <p className="mt-2">
+          Al introducir tu dirección en el checkout, el sistema calculará automáticamente las tarifas y
+          transportistas disponibles para tu país y código postal. Si tu país no aparece en la lista o tienes
+          dudas, escríbeme a{' '}
+          <a href="mailto:lunekoshop@gmail.com" className="text-brand-green hover:underline">
+            lunekoshop@gmail.com
+          </a>{' '}
+          y lo miramos juntos.
+        </p>
+      </>
     ),
   },
   {
