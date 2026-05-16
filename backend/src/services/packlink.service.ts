@@ -104,10 +104,21 @@ export async function quoteShipping(params: {
 
   const raw = await call<any[]>(`/v1/services?${q.toString()}`, { method: 'GET' });
 
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[packlink] raw services sample:', JSON.stringify((raw ?? []).slice(0, 2), null, 2));
+  }
+
   const home: QuotedService[]   = [];
   const pickup: QuotedService[] = [];
   for (const s of raw ?? []) {
-    const dropoff = !!s.service_info?.dropoff_destination;
+    const dropoff = !!(
+      s.service_info?.dropoff_destination ||
+      s.dropoff_destination ||
+      s.dropoff ||
+      s.service_info?.type === 'DROPOFF' ||
+      s.delivery_type === 'dropoff' ||
+      s.to_type === 'dropoff'
+    );
     const priceBase = parseFloat(s.price?.total_price ?? s.price?.base_price ?? '0');
     if (!Number.isFinite(priceBase) || priceBase <= 0) continue;
     const quoted: QuotedService = {

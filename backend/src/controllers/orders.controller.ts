@@ -83,9 +83,12 @@ export async function pickupPoints(req: Request, res: Response, next: NextFuncti
     if (!carrierId || !country || !zip) {
       throw new AppError('Faltan parámetros: carrierId, country, zip', 400);
     }
+    console.log(`[pickupPoints] carrierId=${carrierId} country=${country} zip=${zip}`);
     const points = await ordersService.listPickupPoints(carrierId, country, zip);
+    console.log(`[pickupPoints] returned ${points.length} points`);
     res.json(points);
   } catch (err) {
+    console.error('[pickupPoints] error:', err);
     next(err);
   }
 }

@@ -64,6 +64,7 @@ export default function CheckoutPage() {
 
   const [pickupPoints, setPickupPoints] = useState<PickupPoint[]>([]);
   const [pickupLoading, setPickupLoading] = useState(false);
+  const [pickupError, setPickupError] = useState<string | null>(null);
   const [selectedPickup, setSelectedPickup] = useState<PickupPoint | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
@@ -131,6 +132,7 @@ export default function CheckoutPage() {
     setSelectedService(null);
     setSelectedPickup(null);
     setPickupPoints([]);
+    setPickupError(null);
     setShowAllServices(false);
   }, [deliveryType]);
 
@@ -143,9 +145,13 @@ export default function CheckoutPage() {
     }
     setPickupLoading(true);
     setSelectedPickup(null);
+    setPickupError(null);
     getPickupPoints(selectedService.carrierId, form.country, form.postalCode.trim())
       .then((pts) => setPickupPoints(pts))
-      .catch(() => setPickupPoints([]))
+      .catch((err: unknown) => {
+        setPickupPoints([]);
+        setPickupError(err instanceof Error ? err.message : 'Error al obtener puntos de recogida');
+      })
       .finally(() => setPickupLoading(false));
   }, [selectedService, deliveryType, form.country, form.postalCode]);
 
@@ -432,6 +438,8 @@ export default function CheckoutPage() {
                 <label className="block text-sm font-medium text-brand-dark mb-1">Punto de recogida</label>
                 {pickupLoading ? (
                   <p className="text-sm text-gray-500">Buscando puntos cercanos…</p>
+                ) : pickupError ? (
+                  <p className="text-sm text-red-600">{pickupError}</p>
                 ) : pickupPoints.length === 0 ? (
                   <p className="text-sm text-amber-700">No se encontraron puntos para este transportista. Prueba con otro servicio.</p>
                 ) : (
