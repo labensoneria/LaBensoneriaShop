@@ -423,6 +423,16 @@ cd frontend && npm test
 
 ## 10. Estado actual del proyecto
 
+### Integración Packlink Pro (envíos)
+
+* **Tarifas en vivo:** `POST /api/orders/shipping-quote` (`{toCountry, toZip, items}`) consulta Packlink Pro y devuelve `{home, pickup}` (cada servicio con `serviceId`, `carrierId/Name`, `serviceName`, `priceTotal` ya con IVA al 21%, `dropoff`). Reemplaza por completo el antiguo sistema de zonas fijas (`shipping_*` en AppSettings ya no se usa).
+* **Punto de recogida:** `GET /api/orders/pickup-points?carrierId=&country=&zip=` proxy a Packlink. El usuario elige primero el servicio de tipo pickup y después un punto del dropdown.
+* **Creación de pedido:** el cliente envía `packlinkServiceId`, `deliveryType` (`HOME|PICKUP_POINT`) y, si aplica, `pickupPointId/Name/Address`. El backend re-cotiza, busca el `serviceId` y fija `order.shippingCost = priceTotal` (anti-tampering). Nunca se confía en el precio del cliente.
+* **Reserva del envío:** al marcar el pedido como `SHIPPED` desde `/admin/pedidos`, el backend llama `packlink.createShipment` + `payShipment`, persiste `packlinkShipmentRef`, `packlinkTrackingNumber/Url`, `packlinkLabelUrl`, y solo entonces cambia el estado y envía el email "tu pedido va en camino" con tracking incluido. Si falla, no se cambia el estado y se devuelve 502. El admin puede pasar `skipPacklink: true` (UI muestra confirmación) para envíos manuales.
+* **Schema (`add_packlink_fields` migration):** `Product.weightGrams` (Int, default `250`); en `Order`: `deliveryType`, `packlinkServiceId/CarrierName/ServiceName/ShipmentRef/TrackingNumber/TrackingUrl/LabelUrl`, `pickupPointId/Name/Address`.
+* **Env vars nuevas (backend):** `PACKLINK_API_KEY`, `PACKLINK_API_URL` (default `https://api.packlink.com`), `SHIPPING_VAT_MULTIPLIER` (default `1.21`), `SHIPPER_NAME/STREET/CITY/ZIP/COUNTRY/PHONE/EMAIL`, `SHIPPER_BOX_H_CM/W_CM/L_CM` (default 15/20/25). Validadas/logueadas en `server.ts`.
+* **Frontend country dropdown:** ahora usa códigos ISO (ES, FR, DE…) en `value`, etiquetas en español. La radio de subzona España se eliminó.
+
 ### Decisiones tomadas en Fase 5
 
 * **Flujo de pago:** `createOrder` crea el pedido en `PENDING/UNPAID` → `createStripeCheckoutSession` genera la sesión y guarda `stripeCheckoutSessionId` en la Order → frontend hace `window.location.href = sessionUrl` → Stripe redirige a `/pedido/:id?pagado=true` (éxito) o `/checkout?cancelado=true` (cancelación).

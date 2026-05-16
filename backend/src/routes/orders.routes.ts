@@ -4,10 +4,11 @@ import { optionalAuth, requireAuth } from '../middleware/auth';
 
 const router = Router();
 
-router.get('/availability',   ctrl.availability);
-router.get('/shipping-rates', ctrl.shippingRates);
-router.get('/my-orders',      requireAuth, ctrl.myOrders);
-router.post('/',              optionalAuth, ctrl.create);
-router.get('/:id',            ctrl.getOne);
+router.get('/availability',    ctrl.availability);
+router.post('/shipping-quote', ctrl.shippingQuote);
+router.get('/pickup-points',   ctrl.pickupPoints);
+router.get('/my-orders',       requireAuth, ctrl.myOrders);
+router.post('/',               optionalAuth, ctrl.create);
+router.get('/:id',             ctrl.getOne);
 
 export default router;

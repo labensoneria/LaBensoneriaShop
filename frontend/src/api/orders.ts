@@ -1,12 +1,24 @@
 import { apiFetch } from './client';
-import type { Order, CreateOrderPayload, PaginatedOrders, ShippingRates, OrderStatus, OrdersAvailability } from '../types';
+import type { Order, CreateOrderPayload, PaginatedOrders, OrderStatus, OrdersAvailability, ShippingQuote, PickupPoint } from '../types';
 
 export function getOrdersAvailability() {
   return apiFetch<OrdersAvailability>('/api/orders/availability');
 }
 
-export function getShippingRates() {
-  return apiFetch<ShippingRates>('/api/orders/shipping-rates');
+export function quoteShipping(payload: {
+  toCountry: string;
+  toZip:     string;
+  items:     { productId: string; quantity: number }[];
+}) {
+  return apiFetch<ShippingQuote>('/api/orders/shipping-quote', {
+    method: 'POST',
+    body:   JSON.stringify(payload),
+  });
+}
+
+export function getPickupPoints(carrierId: string, country: string, zip: string) {
+  const qs = new URLSearchParams({ carrierId, country, zip });
+  return apiFetch<PickupPoint[]>(`/api/orders/pickup-points?${qs}`);
 }
 
 export function createOrder(payload: CreateOrderPayload) {
@@ -32,9 +44,9 @@ export function getAdminOrders(params?: { page?: number; limit?: number; status?
   return apiFetch<PaginatedOrders>(`/api/admin/orders?${qs}`);
 }
 
-export function updateOrderStatus(id: string, status: OrderStatus, replenishStock?: Record<string, number>) {
+export function updateOrderStatus(id: string, status: OrderStatus, replenishStock?: Record<string, number>, skipPacklink?: boolean) {
   return apiFetch<Order>(`/api/admin/orders/${id}/status`, {
     method: 'PUT',
-    body:   JSON.stringify({ status, ...(replenishStock ? { replenishStock } : {}) }),
+    body:   JSON.stringify({ status, ...(replenishStock ? { replenishStock } : {}), ...(skipPacklink ? { skipPacklink } : {}) }),
   });
 }

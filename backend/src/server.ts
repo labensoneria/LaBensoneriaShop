@@ -12,6 +12,10 @@ console.log('[startup] FRONTEND_URL:', process.env.FRONTEND_URL ?? '(not set)');
 console.log('[startup] CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME ? '✓ set' : '✗ MISSING');
 console.log('[startup] STRIPE_SECRET_KEY:', process.env.STRIPE_SECRET_KEY ? '✓ set' : '✗ MISSING');
 console.log('[startup] STRIPE_WEBHOOK_SECRET:', process.env.STRIPE_WEBHOOK_SECRET ? '✓ set' : '✗ MISSING');
+console.log('[startup] PACKLINK_API_KEY:', process.env.PACKLINK_API_KEY ? '✓ set' : '✗ MISSING');
+console.log('[startup] PACKLINK_API_URL:', process.env.PACKLINK_API_URL ?? '(default https://api.packlink.com)');
+console.log('[startup] SHIPPING_VAT_MULTIPLIER:', process.env.SHIPPING_VAT_MULTIPLIER ?? '(default 1.21)');
+console.log('[startup] SHIPPER_ZIP:', process.env.SHIPPER_ZIP ? '✓ set' : '✗ MISSING');
 
 process.on('unhandledRejection', (reason) => {
   console.error('[unhandledRejection]', reason);

@@ -3,6 +3,7 @@ import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useCartStore, selectCartCount } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import PopupBanner from './PopupBanner';
+import CookieBanner from './CookieBanner';
 
 export default function Layout() {
   const count = useCartStore(selectCartCount);
@@ -31,6 +32,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen flex flex-col">
       <PopupBanner />
+      <CookieBanner />
       {/* Green accent top bar */}
       <div className="h-1 bg-gradient-to-r from-brand-green via-brand-sky to-brand-greenLight" />
       <header className="bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-10">

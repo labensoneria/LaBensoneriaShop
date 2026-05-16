@@ -1,0 +1,232 @@
+import { AppError } from '../utils/AppError';
+
+const BASE = process.env.PACKLINK_API_URL ?? 'https://api.packlink.com';
+const VAT  = parseFloat(process.env.SHIPPING_VAT_MULTIPLIER ?? '1.21');
+
+const SHIPPER = {
+  name:    process.env.SHIPPER_NAME    ?? 'La Bensonería',
+  street:  process.env.SHIPPER_STREET  ?? '',
+  city:    process.env.SHIPPER_CITY    ?? '',
+  zip:     process.env.SHIPPER_ZIP     ?? '',
+  country: process.env.SHIPPER_COUNTRY ?? 'ES',
+  phone:   process.env.SHIPPER_PHONE   ?? '',
+  email:   process.env.SHIPPER_EMAIL   ?? '',
+};
+
+const BOX = {
+  height: parseFloat(process.env.SHIPPER_BOX_H_CM ?? '15'),
+  width:  parseFloat(process.env.SHIPPER_BOX_W_CM ?? '20'),
+  length: parseFloat(process.env.SHIPPER_BOX_L_CM ?? '25'),
+};
+
+export type Package = {
+  weight: number; // kg
+  height: number; // cm
+  width:  number; // cm
+  length: number; // cm
+};
+
+export type QuotedService = {
+  serviceId:   number;
+  carrierId:   string;
+  carrierName: string;
+  serviceName: string;
+  priceBase:   number;
+  priceTotal:  number; // VAT-inclusive
+  transitDays?: number;
+  dropoff:     boolean;
+};
+
+export type PickupPoint = {
+  id:      string;
+  name:    string;
+  address: string;
+  city:    string;
+  zip:     string;
+};
+
+export class PacklinkError extends AppError {
+  constructor(message: string, status = 502, public providerCode?: string) {
+    super(message, status);
+  }
+}
+
+function headers(): Record<string, string> {
+  const key = process.env.PACKLINK_API_KEY;
+  if (!key) throw new PacklinkError('PACKLINK_API_KEY not configured', 500);
+  return {
+    'Authorization': key,
+    'Content-Type':  'application/json',
+  };
+}
+
+async function call<T>(path: string, init?: RequestInit): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, { ...init, headers: { ...headers(), ...((init?.headers as Record<string, string>) ?? {}) } });
+  } catch (err) {
+    throw new PacklinkError(`Packlink network error: ${(err as Error).message}`, 502);
+  }
+  const text = await res.text();
+  let body: unknown = null;
+  try { body = text ? JSON.parse(text) : null; } catch { /* keep null */ }
+  if (!res.ok) {
+    const message = (body as any)?.messages?.[0]?.message
+      ?? (body as any)?.message
+      ?? `Packlink ${res.status}`;
+    throw new PacklinkError(message, 502, String(res.status));
+  }
+  return body as T;
+}
+
+export function buildPackage(items: Array<{ weightGrams: number; quantity: number }>): Package {
+  const grams = items.reduce((acc, i) => acc + i.weightGrams * i.quantity, 0);
+  const kg = Math.max(0.1, Math.round((grams / 1000) * 100) / 100);
+  return { weight: kg, height: BOX.height, width: BOX.width, length: BOX.length };
+}
+
+export async function quoteShipping(params: {
+  toCountry: string;
+  toZip:     string;
+  packages:  Package[];
+}): Promise<{ home: QuotedService[]; pickup: QuotedService[] }> {
+  const q = new URLSearchParams();
+  q.set('from[country]', SHIPPER.country);
+  q.set('from[zip]',     SHIPPER.zip);
+  q.set('to[country]',   params.toCountry);
+  q.set('to[zip]',       params.toZip);
+  params.packages.forEach((p, i) => {
+    q.set(`packages[${i}][weight]`, String(p.weight));
+    q.set(`packages[${i}][height]`, String(p.height));
+    q.set(`packages[${i}][width]`,  String(p.width));
+    q.set(`packages[${i}][length]`, String(p.length));
+  });
+
+  const raw = await call<any[]>(`/v1/services?${q.toString()}`, { method: 'GET' });
+
+  const home: QuotedService[]   = [];
+  const pickup: QuotedService[] = [];
+  for (const s of raw ?? []) {
+    const dropoff = !!s.service_info?.dropoff_destination;
+    const priceBase = parseFloat(s.price?.total_price ?? s.price?.base_price ?? '0');
+    if (!Number.isFinite(priceBase) || priceBase <= 0) continue;
+    const quoted: QuotedService = {
+      serviceId:   Number(s.id ?? s.service_id),
+      carrierId:   String(s.carrier_id ?? s.carrier ?? ''),
+      carrierName: String(s.carrier_name ?? s.carrier ?? ''),
+      serviceName: String(s.name ?? s.service_name ?? ''),
+      priceBase,
+      priceTotal:  Math.round(priceBase * VAT * 100) / 100,
+      transitDays: s.transit_time?.max ?? s.transit_time ?? undefined,
+      dropoff,
+    };
+    (dropoff ? pickup : home).push(quoted);
+  }
+  home.sort((a, b)   => a.priceTotal - b.priceTotal);
+  pickup.sort((a, b) => a.priceTotal - b.priceTotal);
+  return { home, pickup };
+}
+
+export async function getPickupPoints(carrierId: string, country: string, zip: string): Promise<PickupPoint[]> {
+  const qs = new URLSearchParams({ zip_code: zip, country_code: country });
+  const raw = await call<any[]>(`/v1/dropoffs/${encodeURIComponent(carrierId)}?${qs}`, { method: 'GET' });
+  return (raw ?? []).map((p: any) => ({
+    id:      String(p.id ?? p.code),
+    name:    String(p.name ?? ''),
+    address: String(p.address ?? p.street ?? ''),
+    city:    String(p.city ?? ''),
+    zip:     String(p.zip ?? p.postal_code ?? ''),
+  }));
+}
+
+type OrderLike = {
+  id: string;
+  guestName?:  string | null;
+  guestEmail?: string | null;
+  shippingCost: { toString(): string };
+  packlinkServiceId?: number | null;
+  pickupPointId?: string | null;
+  address: {
+    name: string; street: string; street2: string | null;
+    city: string; postalCode: string; country: string;
+  } | null;
+  items: Array<{
+    quantity: number;
+    product: { name: string; weightGrams?: number };
+  }>;
+};
+
+export async function createShipment(
+  order: OrderLike,
+  opts: { serviceId: number; pickupPointId?: string },
+): Promise<{ reference: string; trackingNumber?: string; trackingUrl?: string; labelUrl?: string }> {
+  if (!order.address) throw new PacklinkError('Order missing address', 400);
+
+  const pkg = buildPackage(
+    order.items.map((i) => ({ weightGrams: i.product.weightGrams ?? 250, quantity: i.quantity })),
+  );
+
+  const content = order.items.map((i) => `${i.quantity}× ${i.product.name}`).join(', ').slice(0, 120) || 'Crochet';
+
+  const payload: any = {
+    service_id: opts.serviceId,
+    content,
+    price: { amount: parseFloat(order.shippingCost.toString()), currency: 'EUR' },
+    from: {
+      name:    SHIPPER.name,
+      street1: SHIPPER.street,
+      city:    SHIPPER.city,
+      zip_code: SHIPPER.zip,
+      country: SHIPPER.country,
+      phone:   SHIPPER.phone,
+      email:   SHIPPER.email,
+    },
+    to: {
+      name:    order.address.name,
+      street1: order.address.street,
+      street2: order.address.street2 ?? '',
+      city:    order.address.city,
+      zip_code: order.address.postalCode,
+      country: order.address.country,
+      phone:   '',
+      email:   order.guestEmail ?? '',
+    },
+    packages: [{
+      weight: pkg.weight,
+      height: pkg.height,
+      width:  pkg.width,
+      length: pkg.length,
+    }],
+  };
+
+  if (opts.pickupPointId) {
+    payload.dropoff_point_id = opts.pickupPointId;
+  }
+
+  const raw = await call<any>('/v1/shipments', {
+    method: 'POST',
+    body:   JSON.stringify(payload),
+  });
+
+  return {
+    reference:      String(raw.reference ?? raw.id),
+    trackingNumber: raw.tracking_codes?.[0] ?? raw.tracking_number ?? undefined,
+    trackingUrl:    raw.trackings?.[0] ?? raw.tracking_url ?? undefined,
+    labelUrl:       raw.labels?.[0] ?? raw.label_url ?? undefined,
+  };
+}
+
+export async function payShipment(reference: string): Promise<void> {
+  await call<unknown>(`/v1/shipments/${encodeURIComponent(reference)}/payment`, { method: 'POST' });
+}
+
+export async function getShipment(reference: string): Promise<{
+  trackingNumber?: string; trackingUrl?: string; labelUrl?: string;
+}> {
+  const raw = await call<any>(`/v1/shipments/${encodeURIComponent(reference)}`, { method: 'GET' });
+  return {
+    trackingNumber: raw.tracking_codes?.[0] ?? raw.tracking_number ?? undefined,
+    trackingUrl:    raw.trackings?.[0] ?? raw.tracking_url ?? undefined,
+    labelUrl:       raw.labels?.[0] ?? raw.label_url ?? undefined,
+  };
+}

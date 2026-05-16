@@ -154,6 +154,36 @@ export async function sendOrderShipped(orderId: string): Promise<void> {
 
   const orderUrl = `${FRONTEND_URL}/pedido/${order.id}`;
 
+  const carrierLine = order.packlinkCarrierName
+    ? `<p style="margin:0 0 16px;font-size:14px;color:#555;">Transportista: <strong>${order.packlinkCarrierName}</strong>${order.packlinkServiceName ? ` · ${order.packlinkServiceName}` : ''}</p>`
+    : '';
+
+  const trackingBlock = order.packlinkTrackingNumber
+    ? `
+      <div style="margin:0 0 24px;padding:16px;background:#FAF7F0;border-radius:6px;font-size:13px;line-height:1.7;">
+        <strong style="color:#4A7C59;">Seguimiento</strong><br />
+        Nº de seguimiento: <strong>${order.packlinkTrackingNumber}</strong>
+        ${order.packlinkTrackingUrl ? `<br /><a href="${order.packlinkTrackingUrl}" style="color:#4A7C59;">Seguir mi envío</a>` : ''}
+      </div>`
+    : '';
+
+  const isPickup = order.deliveryType === 'PICKUP_POINT' && order.pickupPointName;
+  const deliveryBlock = isPickup
+    ? `
+      <div style="margin:0 0 24px;padding:16px;background:#FAF7F0;border-radius:6px;font-size:13px;line-height:1.7;">
+        <strong style="color:#4A7C59;">Punto de recogida</strong><br />
+        ${order.pickupPointName}<br />
+        ${order.pickupPointAddress ?? ''}
+      </div>`
+    : order.address ? `
+      <div style="margin:0 0 24px;padding:16px;background:#FAF7F0;border-radius:6px;font-size:13px;line-height:1.7;">
+        <strong style="color:#4A7C59;">Dirección de entrega</strong><br />
+        ${order.address.name}<br />
+        ${order.address.street}${order.address.street2 ? ', ' + order.address.street2 : ''}<br />
+        ${order.address.postalCode} ${order.address.city}<br />
+        ${order.address.country}
+      </div>` : '';
+
   const html = `
 <!DOCTYPE html>
 <html lang="es">
@@ -165,18 +195,13 @@ export async function sendOrderShipped(orderId: string): Promise<void> {
 
     <div style="padding:32px 40px;">
       <h2 style="margin:0 0 8px;font-size:18px;color:#2C3E2D;">¡Tu pedido está en camino, ${recipientName}!</h2>
-      <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.6;">
+      <p style="margin:0 0 16px;font-size:14px;color:#555;line-height:1.6;">
         Hemos enviado tu pedido <strong>#${order.id.slice(0, 8).toUpperCase()}</strong>. Llegará en los próximos días.
       </p>
 
-      ${order.address ? `
-      <div style="margin:0 0 24px;padding:16px;background:#FAF7F0;border-radius:6px;font-size:13px;line-height:1.7;">
-        <strong style="color:#4A7C59;">Dirección de entrega</strong><br />
-        ${order.address.name}<br />
-        ${order.address.street}${order.address.street2 ? ', ' + order.address.street2 : ''}<br />
-        ${order.address.postalCode} ${order.address.city}<br />
-        ${order.address.country}
-      </div>` : ''}
+      ${carrierLine}
+      ${trackingBlock}
+      ${deliveryBlock}
 
       <div style="margin:28px 0 0;text-align:center;">
         <a href="${orderUrl}" style="display:inline-block;background:#4A7C59;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:6px;font-size:14px;letter-spacing:.3px;">

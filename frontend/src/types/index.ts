@@ -67,9 +67,33 @@ export interface CartItem {
 
 // ── Pedidos ──────────────────────────────────────────────────────────────────
 
-export type ShippingZone   = 'peninsular' | 'baleares' | 'canarias' | 'international';
+export type DeliveryType   = 'HOME' | 'PICKUP_POINT';
 export type OrderStatus    = 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'COMPLETED';
 export type PaymentStatus  = 'UNPAID' | 'PAID' | 'FAILED' | 'REFUNDED';
+
+export interface QuotedService {
+  serviceId:   number;
+  carrierId:   string;
+  carrierName: string;
+  serviceName: string;
+  priceBase:   number;
+  priceTotal:  number;
+  transitDays?: number;
+  dropoff:     boolean;
+}
+
+export interface ShippingQuote {
+  home:   QuotedService[];
+  pickup: QuotedService[];
+}
+
+export interface PickupPoint {
+  id:      string;
+  name:    string;
+  address: string;
+  city:    string;
+  zip:     string;
+}
 
 export interface OrderItemDetail {
   id:                 string;
@@ -109,6 +133,17 @@ export interface Order {
   paymentProvider?:        string | null;
   stripeCheckoutSessionId?: string | null;
   paidAt?:                 string | null;
+  deliveryType?:           DeliveryType | null;
+  packlinkServiceId?:      number | null;
+  packlinkCarrierName?:    string | null;
+  packlinkServiceName?:    string | null;
+  packlinkShipmentRef?:    string | null;
+  packlinkTrackingNumber?: string | null;
+  packlinkTrackingUrl?:    string | null;
+  packlinkLabelUrl?:       string | null;
+  pickupPointId?:          string | null;
+  pickupPointName?:        string | null;
+  pickupPointAddress?:     string | null;
   items:                   OrderItemDetail[];
   address?:                ShippingAddress;
 }
@@ -129,7 +164,11 @@ export interface CreateOrderPayload {
   items: { productId: string; quantity: number; asKeychain: boolean; selectedColorHex?: string; selectedColorName?: string }[];
   guestEmail:            string;
   guestName:             string;
-  shippingZone:          ShippingZone;
+  deliveryType:          DeliveryType;
+  packlinkServiceId:     number;
+  pickupPointId?:        string;
+  pickupPointName?:      string;
+  pickupPointAddress?:   string;
   saveAddressToProfile?: boolean;
   address: {
     name:       string;
@@ -140,8 +179,6 @@ export interface CreateOrderPayload {
     country:    string;
   };
 }
-
-export type ShippingRates = Record<ShippingZone, number>;
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 

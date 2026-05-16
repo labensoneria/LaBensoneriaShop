@@ -37,6 +37,7 @@ model Product {
   discountPercent       Int?
   active                Boolean        @default(true)
   publishedAt           DateTime       @default(now())
+  weightGrams           Int            @default(250)
   images                ProductImage[]
   colors                ProductColor[]
   orderItems            OrderItem[]
@@ -77,6 +78,17 @@ model Order {
   paidAt                  DateTime?
   paymentCurrency         String?
   paymentAmount           Decimal?         @db.Decimal(10, 2)
+  deliveryType            String?
+  packlinkServiceId       Int?
+  packlinkCarrierName     String?
+  packlinkServiceName     String?
+  packlinkShipmentRef     String?          @unique
+  packlinkTrackingNumber  String?
+  packlinkTrackingUrl     String?
+  packlinkLabelUrl        String?
+  pickupPointId           String?
+  pickupPointName         String?
+  pickupPointAddress      String?
   user                    User?            @relation(fields: [userId], references: [id])
   items                   OrderItem[]
   address                 ShippingAddress?

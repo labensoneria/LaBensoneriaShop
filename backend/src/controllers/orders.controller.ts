@@ -17,7 +17,11 @@ const createOrderSchema = z.object({
     .min(1),
   guestEmail:           z.string().email(),
   guestName:            z.string().min(1),
-  shippingZone:         z.enum(['peninsular', 'baleares', 'canarias', 'international']),
+  deliveryType:         z.enum(['HOME', 'PICKUP_POINT']),
+  packlinkServiceId:    z.number().int().positive(),
+  pickupPointId:        z.string().optional(),
+  pickupPointName:      z.string().optional(),
+  pickupPointAddress:   z.string().optional(),
   saveAddressToProfile: z.boolean().optional(),
   address: z.object({
     name:       z.string().min(1),
@@ -27,6 +31,17 @@ const createOrderSchema = z.object({
     postalCode: z.string().min(1),
     country:    z.string().min(1),
   }),
+});
+
+const quoteSchema = z.object({
+  toCountry: z.string().min(2).max(2),
+  toZip:     z.string().min(1),
+  items: z
+    .array(z.object({
+      productId: z.string().uuid(),
+      quantity:  z.number().int().min(1).max(10),
+    }))
+    .min(1),
 });
 
 export async function create(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -50,10 +65,26 @@ export async function getOne(req: Request, res: Response, next: NextFunction): P
   }
 }
 
-export async function shippingRates(_req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function shippingQuote(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const rates = await ordersService.getShippingRates();
-    res.json(rates);
+    const data = quoteSchema.parse(req.body);
+    const quote = await ordersService.quoteForCart(data);
+    res.json(quote);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function pickupPoints(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const carrierId = String(req.query.carrierId ?? '');
+    const country   = String(req.query.country   ?? '');
+    const zip       = String(req.query.zip       ?? '');
+    if (!carrierId || !country || !zip) {
+      throw new AppError('Faltan parámetros: carrierId, country, zip', 400);
+    }
+    const points = await ordersService.listPickupPoints(carrierId, country, zip);
+    res.json(points);
   } catch (err) {
     next(err);
   }

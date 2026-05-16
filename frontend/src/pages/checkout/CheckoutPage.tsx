@@ -1,24 +1,50 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useCartStore, selectCartTotal } from '../../store/cartStore';
 import { useAuthStore } from '../../store/authStore';
-import { getShippingRates, createOrder } from '../../api/orders';
+import { quoteShipping, getPickupPoints, createOrder } from '../../api/orders';
 import { createStripeCheckoutSession } from '../../api/payments';
-import type { ShippingZone, ShippingRates } from '../../types';
+import type { DeliveryType, QuotedService, ShippingQuote, PickupPoint } from '../../types';
 
-type SpainSubzone = 'peninsular' | 'baleares' | 'canarias';
+const COUNTRIES: { code: string; label: string }[] = [
+  { code: 'ES', label: 'España' },
+  { code: 'PT', label: 'Portugal' },
+  { code: 'FR', label: 'Francia' },
+  { code: 'DE', label: 'Alemania' },
+  { code: 'IT', label: 'Italia' },
+  { code: 'BE', label: 'Bélgica' },
+  { code: 'NL', label: 'Países Bajos' },
+  { code: 'AT', label: 'Austria' },
+  { code: 'IE', label: 'Irlanda' },
+  { code: 'LU', label: 'Luxemburgo' },
+  { code: 'DK', label: 'Dinamarca' },
+  { code: 'SE', label: 'Suecia' },
+  { code: 'FI', label: 'Finlandia' },
+  { code: 'PL', label: 'Polonia' },
+  { code: 'CZ', label: 'República Checa' },
+  { code: 'SK', label: 'Eslovaquia' },
+  { code: 'HU', label: 'Hungría' },
+  { code: 'SI', label: 'Eslovenia' },
+  { code: 'HR', label: 'Croacia' },
+  { code: 'RO', label: 'Rumanía' },
+  { code: 'BG', label: 'Bulgaria' },
+  { code: 'EE', label: 'Estonia' },
+  { code: 'LV', label: 'Letonia' },
+  { code: 'LT', label: 'Lituania' },
+  { code: 'GR', label: 'Grecia' },
+  { code: 'CY', label: 'Chipre' },
+  { code: 'MT', label: 'Malta' },
+];
 
-const ZONE_LABELS: Record<ShippingZone, string> = {
-  peninsular:    'España peninsular',
-  baleares:      'Islas Baleares',
-  canarias:      'Islas Canarias, Ceuta y Melilla',
-  international: 'Internacional (UE)',
-};
+// Legacy support: map old Spanish names stored in user.addressCountry to ISO codes
+const LEGACY_NAME_TO_CODE: Record<string, string> = Object.fromEntries(
+  COUNTRIES.map((c) => [c.label, c.code]),
+);
 
-function deriveZone(country: string, subzone: SpainSubzone): ShippingZone {
-  if (!country) return 'peninsular';
-  if (country === 'España') return subzone;
-  return 'international';
+function normalizeCountry(value: string | null | undefined): string {
+  if (!value) return 'ES';
+  if (COUNTRIES.some((c) => c.code === value)) return value;
+  return LEGACY_NAME_TO_CODE[value] ?? '';
 }
 
 export default function CheckoutPage() {
@@ -28,8 +54,18 @@ export default function CheckoutPage() {
   const subtotal  = useCartStore(selectCartTotal);
   const { user }  = useAuthStore();
 
-  const [rates, setRates]   = useState<ShippingRates | null>(null);
-  const [spainSubzone, setSpainSubzone] = useState<SpainSubzone>('peninsular');
+  const [deliveryType, setDeliveryType] = useState<DeliveryType>('HOME');
+  const [quote, setQuote] = useState<ShippingQuote | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [selectedService, setSelectedService] = useState<QuotedService | null>(null);
+
+  const [showAllServices, setShowAllServices] = useState(false);
+
+  const [pickupPoints, setPickupPoints] = useState<PickupPoint[]>([]);
+  const [pickupLoading, setPickupLoading] = useState(false);
+  const [selectedPickup, setSelectedPickup] = useState<PickupPoint | null>(null);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]   = useState<string | null>(null);
   const [saveAddress, setSaveAddress] = useState(false);
@@ -45,27 +81,93 @@ export default function CheckoutPage() {
     street2:    user?.addressStreet2 ?? '',
     city:       user?.addressCity    ?? '',
     postalCode: user?.addressPostal  ?? '',
-    country:    user?.addressCountry ?? 'España',
+    country:    normalizeCountry(user?.addressCountry),
   });
 
   useEffect(() => {
     if (items.length === 0 && !orderPlaced.current) {
       navigate('/carrito', { replace: true });
-      return;
     }
-    getShippingRates().then(setRates).catch(() => null);
   }, [items.length, navigate]);
 
-  const zone = deriveZone(form.country, spainSubzone);
-  const shippingCost = rates ? rates[zone] : null;
+  // Debounced shipping quote when country + postal code + items are valid
+  const quoteKey = `${form.country}|${form.postalCode}|${items.map((i) => `${i.productId}x${i.quantity}`).join(',')}`;
+  useEffect(() => {
+    if (!form.country || form.postalCode.trim().length < 4 || items.length === 0) {
+      setQuote(null);
+      setSelectedService(null);
+      return;
+    }
+    const handle = setTimeout(async () => {
+      setQuoteLoading(true);
+      setQuoteError(null);
+      try {
+        const q = await quoteShipping({
+          toCountry: form.country,
+          toZip:     form.postalCode.trim(),
+          items:     items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+        });
+        setQuote(q);
+        setSelectedService(null);
+        setSelectedPickup(null);
+        setPickupPoints([]);
+        setShowAllServices(false);
+      } catch (err: unknown) {
+        setQuote(null);
+        const raw = err instanceof Error ? err.message : '';
+        const friendly = /bad request|postal|zip|invalid/i.test(raw)
+          ? 'Código postal inválido o sin cobertura para envíos'
+          : 'No podemos calcular el envío ahora, inténtalo de nuevo';
+        setQuoteError(friendly);
+      } finally {
+        setQuoteLoading(false);
+      }
+    }, 500);
+    return () => clearTimeout(handle);
+  }, [quoteKey]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reset chosen service when delivery type changes
+  useEffect(() => {
+    setSelectedService(null);
+    setSelectedPickup(null);
+    setPickupPoints([]);
+    setShowAllServices(false);
+  }, [deliveryType]);
+
+  // Load pickup points when a pickup service is selected
+  useEffect(() => {
+    if (deliveryType !== 'PICKUP_POINT' || !selectedService) {
+      setPickupPoints([]);
+      setSelectedPickup(null);
+      return;
+    }
+    setPickupLoading(true);
+    setSelectedPickup(null);
+    getPickupPoints(selectedService.carrierId, form.country, form.postalCode.trim())
+      .then((pts) => setPickupPoints(pts))
+      .catch(() => setPickupPoints([]))
+      .finally(() => setPickupLoading(false));
+  }, [selectedService, deliveryType, form.country, form.postalCode]);
+
+  const visibleServices = useMemo(() => {
+    if (!quote) return [];
+    return deliveryType === 'HOME' ? quote.home : quote.pickup;
+  }, [quote, deliveryType]);
+
+  const shippingCost = selectedService ? selectedService.priceTotal : null;
   const total = shippingCost !== null ? subtotal + shippingCost : null;
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   }
 
+  const canSubmit =
+    !!form.country && !!form.postalCode && !!selectedService &&
+    (deliveryType === 'HOME' || !!selectedPickup);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!selectedService) return;
     setError(null);
     setSubmitting(true);
     try {
@@ -78,9 +180,15 @@ export default function CheckoutPage() {
             ? { selectedColorHex: i.selectedColorHex, selectedColorName: i.selectedColorName }
             : {}),
         })),
-        guestEmail:   form.guestEmail,
-        guestName:    form.guestName,
-        shippingZone: zone,
+        guestEmail:        form.guestEmail,
+        guestName:         form.guestName,
+        deliveryType,
+        packlinkServiceId: selectedService.serviceId,
+        ...(deliveryType === 'PICKUP_POINT' && selectedPickup ? {
+          pickupPointId:      selectedPickup.id,
+          pickupPointName:    selectedPickup.name,
+          pickupPointAddress: `${selectedPickup.address}, ${selectedPickup.zip} ${selectedPickup.city}`,
+        } : {}),
         saveAddressToProfile: user ? saveAddress : undefined,
         address: {
           name:       form.addrName,
@@ -220,64 +328,11 @@ export default function CheckoutPage() {
                   className="w-full border border-brand-greenLight rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-green bg-white"
                 >
                   <option value="">Selecciona un país</option>
-                  <option value="Alemania">Alemania</option>
-                  <option value="Austria">Austria</option>
-                  <option value="Bélgica">Bélgica</option>
-                  <option value="Bulgaria">Bulgaria</option>
-                  <option value="Chipre">Chipre</option>
-                  <option value="Croacia">Croacia</option>
-                  <option value="Dinamarca">Dinamarca</option>
-                  <option value="Eslovaquia">Eslovaquia</option>
-                  <option value="Eslovenia">Eslovenia</option>
-                  <option value="España">España</option>
-                  <option value="Estonia">Estonia</option>
-                  <option value="Finlandia">Finlandia</option>
-                  <option value="Francia">Francia</option>
-                  <option value="Grecia">Grecia</option>
-                  <option value="Hungría">Hungría</option>
-                  <option value="Irlanda">Irlanda</option>
-                  <option value="Italia">Italia</option>
-                  <option value="Letonia">Letonia</option>
-                  <option value="Lituania">Lituania</option>
-                  <option value="Luxemburgo">Luxemburgo</option>
-                  <option value="Malta">Malta</option>
-                  <option value="Países Bajos">Países Bajos</option>
-                  <option value="Polonia">Polonia</option>
-                  <option value="Portugal">Portugal</option>
-                  <option value="República Checa">República Checa</option>
-                  <option value="Rumanía">Rumanía</option>
-                  <option value="Suecia">Suecia</option>
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.code}>{c.label}</option>
+                  ))}
                 </select>
               </div>
-
-              {/* Subzona España */}
-              {form.country === 'España' && (
-                <div className="flex flex-col gap-2 pt-1">
-                  <p className="text-sm font-medium text-brand-dark">¿Dónde te enviamos?</p>
-                  {(
-                    [
-                      { value: 'peninsular', label: 'Península y Portugal' },
-                      { value: 'baleares',   label: 'Islas Baleares' },
-                      { value: 'canarias',   label: 'Islas Canarias, Ceuta y Melilla' },
-                    ] as { value: SpainSubzone; label: string }[]
-                  ).map(({ value, label }) => (
-                    <label key={value} className="flex items-center gap-2 cursor-pointer select-none">
-                      <input
-                        type="radio"
-                        name="spainSubzone"
-                        value={value}
-                        checked={spainSubzone === value}
-                        onChange={() => setSpainSubzone(value)}
-                        className="w-4 h-4 accent-brand-green"
-                      />
-                      <span className="text-sm text-brand-dark">
-                        {label}
-                        {rates ? ` — ${rates[value].toFixed(2)} €` : ''}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              )}
 
               {/* Checkbox guardar dirección — solo para usuarios autenticados */}
               {user && (
@@ -295,20 +350,106 @@ export default function CheckoutPage() {
           </section>
         </div>
 
-        {/* Resumen del pedido */}
+        {/* Envío + resumen */}
         <div className="flex flex-col gap-6">
-          {/* Zona de envío (solo lectura) */}
+          {/* Tipo de entrega + servicio */}
           <section className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-lg font-bold text-brand-dark mb-3">Zona de envío</h2>
-            {form.country ? (
-              <p className="text-sm text-brand-dark">
-                {ZONE_LABELS[zone]}
-                {shippingCost !== null && (
-                  <span className="ml-1 font-semibold">&mdash; {shippingCost.toFixed(2)} €</span>
-                )}
-              </p>
+            <h2 className="text-lg font-bold text-brand-dark mb-3">Método de envío</h2>
+
+            <div className="flex gap-2 mb-4">
+              {([
+                { value: 'HOME',         label: 'Domicilio' },
+                { value: 'PICKUP_POINT', label: 'Punto de recogida' },
+              ] as { value: DeliveryType; label: string }[]).map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setDeliveryType(value)}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                    deliveryType === value
+                      ? 'bg-brand-green text-white border-brand-green'
+                      : 'bg-white text-brand-dark border-brand-greenLight hover:bg-brand-cream'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {!form.country || form.postalCode.trim().length < 4 ? (
+              <p className="text-sm text-gray-500">Introduce código postal y país para calcular los envíos disponibles.</p>
+            ) : quoteLoading ? (
+              <p className="text-sm text-gray-500">Calculando tarifas…</p>
+            ) : quoteError ? (
+              <p className="text-sm text-red-600">{quoteError}</p>
+            ) : visibleServices.length === 0 ? (
+              <p className="text-sm text-amber-700">No hay servicios {deliveryType === 'PICKUP_POINT' ? 'con punto de recogida' : 'a domicilio'} disponibles para esa dirección.</p>
             ) : (
-              <p className="text-sm text-gray-400">Selecciona un país para calcular el envío</p>
+              <div className="flex flex-col gap-2">
+                {(showAllServices ? visibleServices : visibleServices.slice(0, 3)).map((s) => (
+                  <label
+                    key={s.serviceId}
+                    className={`flex items-center justify-between gap-3 border rounded-lg px-3 py-2 cursor-pointer text-sm ${
+                      selectedService?.serviceId === s.serviceId
+                        ? 'border-brand-green bg-brand-cream'
+                        : 'border-brand-greenLight hover:bg-brand-cream/60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="packlinkService"
+                        checked={selectedService?.serviceId === s.serviceId}
+                        onChange={() => setSelectedService(s)}
+                        className="w-4 h-4 accent-brand-green"
+                      />
+                      <div>
+                        <div className="font-medium text-brand-dark">{s.carrierName}</div>
+                        <div className="text-xs text-gray-500">
+                          {s.serviceName}{s.transitDays ? ` · ${s.transitDays} días` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="font-semibold text-brand-dark">{s.priceTotal.toFixed(2)} €</span>
+                  </label>
+                ))}
+                {visibleServices.length > 3 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllServices((v) => !v)}
+                    className="text-sm text-brand-green hover:underline text-left mt-1"
+                  >
+                    {showAllServices
+                      ? 'Mostrar menos'
+                      : `Ver ${visibleServices.length - 3} opciones más`}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {deliveryType === 'PICKUP_POINT' && selectedService && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-brand-dark mb-1">Punto de recogida</label>
+                {pickupLoading ? (
+                  <p className="text-sm text-gray-500">Buscando puntos cercanos…</p>
+                ) : pickupPoints.length === 0 ? (
+                  <p className="text-sm text-amber-700">No se encontraron puntos para este transportista. Prueba con otro servicio.</p>
+                ) : (
+                  <select
+                    required
+                    value={selectedPickup?.id ?? ''}
+                    onChange={(e) => setSelectedPickup(pickupPoints.find((p) => p.id === e.target.value) ?? null)}
+                    className="w-full border border-brand-greenLight rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-green bg-white"
+                  >
+                    <option value="">Selecciona un punto…</option>
+                    {pickupPoints.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} — {p.address}, {p.zip} {p.city}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
             )}
           </section>
 
@@ -371,7 +512,7 @@ export default function CheckoutPage() {
 
           <button
             type="submit"
-            disabled={submitting || !rates || !form.country}
+            disabled={submitting || !canSubmit}
             className="w-full bg-brand-green text-white py-3 rounded-xl font-semibold hover:bg-brand-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? 'Redirigiendo a Stripe...' : 'Pagar con tarjeta'}

@@ -33,6 +33,17 @@ export default function CookieBanner() {
         style={{ boxShadow: 'rgba(60,64,67,0.3) 0 1px 2px 0, rgba(60,64,67,0.15) 0 2px 6px 2px' }}
       >
         <div className="flex flex-col items-center justify-between pt-9 px-6 pb-6 relative">
+          {/* X close button */}
+          <button
+            onClick={minimal}
+            aria-label="Cerrar"
+            className="absolute top-3 right-3 text-zinc-400 hover:text-zinc-600 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
           {/* Cookie icon floating above */}
           <span className="relative mx-auto -mt-16 mb-8">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" height="46" width="65">
@@ -63,19 +74,22 @@ export default function CookieBanner() {
             </Link>
           </p>
 
-          <button
-            onClick={minimal}
-            className="mb-2 text-sm mr-auto text-zinc-500 cursor-pointer font-semibold transition-colors hover:text-[#634647] hover:underline underline-offset-2"
-          >
-            Solo necesarias
-          </button>
-          <button
-            onClick={accept}
-            type="button"
-            className="absolute font-semibold right-6 bottom-6 cursor-pointer py-2 px-8 w-max text-sm rounded-lg transition-colors text-[#634647] hover:text-[#ddad81] bg-[#ddad81] hover:bg-[#634647]"
-          >
-            Aceptar
-          </button>
+          <div className="flex gap-2 w-full mt-auto">
+            <button
+              onClick={minimal}
+              type="button"
+              className="flex-1 font-semibold cursor-pointer py-2 px-4 text-sm rounded-lg transition-colors text-[#634647] hover:text-[#ddad81] bg-[#ddad81] hover:bg-[#634647]"
+            >
+              Solo necesarias
+            </button>
+            <button
+              onClick={accept}
+              type="button"
+              className="flex-1 font-semibold cursor-pointer py-2 px-4 text-sm rounded-lg transition-colors text-[#634647] hover:text-[#ddad81] bg-[#ddad81] hover:bg-[#634647]"
+            >
+              Aceptar
+            </button>
+          </div>
         </div>
       </div>
     </div>

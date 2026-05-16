@@ -1,29 +1,9 @@
 import prisma from '../utils/prisma';
 import { AppError } from '../utils/AppError';
 import { computeEffectivePrice } from './products.service';
+import * as packlink from './packlink.service';
 
-export type ShippingZone = 'peninsular' | 'baleares' | 'canarias' | 'international';
-
-const SHIPPING_KEYS: Record<ShippingZone, string> = {
-  peninsular:    'shipping_peninsular',
-  baleares:      'shipping_baleares',
-  canarias:      'shipping_canarias',
-  international: 'shipping_international',
-};
-
-const SHIPPING_DEFAULTS: Record<ShippingZone, number> = {
-  peninsular:    5.92,
-  baleares:      7.55,
-  canarias:      11.37,
-  international: 20.00,
-};
-
-export const SHIPPING_ZONE_LABELS: Record<ShippingZone, string> = {
-  peninsular:    'España peninsular y Portugal',
-  baleares:      'Islas Baleares',
-  canarias:      'Islas Canarias, Ceuta y Melilla',
-  international: 'Internacional',
-};
+export type DeliveryType = 'HOME' | 'PICKUP_POINT';
 
 export async function getOrdersAvailability(): Promise<{ ordersEnabled: boolean }> {
   const setting = await prisma.appSettings.findUnique({
@@ -31,25 +11,6 @@ export async function getOrdersAvailability(): Promise<{ ordersEnabled: boolean 
   });
 
   return { ordersEnabled: setting?.value !== 'false' };
-}
-
-async function getShippingCost(zone: ShippingZone): Promise<number> {
-  const setting = await prisma.appSettings.findUnique({
-    where: { key: SHIPPING_KEYS[zone] },
-  });
-  return setting ? parseFloat(setting.value) : SHIPPING_DEFAULTS[zone];
-}
-
-export async function getShippingRates(): Promise<Record<ShippingZone, number>> {
-  const keys = Object.values(SHIPPING_KEYS);
-  const settings = await prisma.appSettings.findMany({ where: { key: { in: keys } } });
-  const map = Object.fromEntries(settings.map((s) => [s.key, parseFloat(s.value)]));
-  return {
-    peninsular:    map[SHIPPING_KEYS.peninsular]    ?? SHIPPING_DEFAULTS.peninsular,
-    baleares:      map[SHIPPING_KEYS.baleares]      ?? SHIPPING_DEFAULTS.baleares,
-    canarias:      map[SHIPPING_KEYS.canarias]      ?? SHIPPING_DEFAULTS.canarias,
-    international: map[SHIPPING_KEYS.international] ?? SHIPPING_DEFAULTS.international,
-  };
 }
 
 interface OrderItemInput {
@@ -73,10 +34,44 @@ export interface CreateOrderInput {
   items:                OrderItemInput[];
   guestEmail:           string;
   guestName:            string;
-  shippingZone:         ShippingZone;
   address:              AddressInput;
+  deliveryType:         DeliveryType;
+  packlinkServiceId:    number;
+  pickupPointId?:       string;
+  pickupPointName?:     string;
+  pickupPointAddress?:  string;
   userId?:              string;
   saveAddressToProfile?: boolean;
+}
+
+export async function quoteForCart(input: {
+  toCountry: string;
+  toZip:     string;
+  items:     Array<{ productId: string; quantity: number }>;
+}) {
+  const ids = [...new Set(input.items.map((i) => i.productId))];
+  const products = await prisma.product.findMany({
+    where:  { id: { in: ids }, active: true },
+    select: { id: true, weightGrams: true },
+  });
+  if (products.length !== ids.length) {
+    throw new AppError('Uno o más productos no están disponibles', 400);
+  }
+  const weightMap = new Map(products.map((p) => [p.id, p.weightGrams]));
+  const weighted  = input.items.map((i) => ({
+    weightGrams: weightMap.get(i.productId)!,
+    quantity:    i.quantity,
+  }));
+  const pkg = packlink.buildPackage(weighted);
+  return packlink.quoteShipping({
+    toCountry: input.toCountry,
+    toZip:     input.toZip,
+    packages:  [pkg],
+  });
+}
+
+export async function listPickupPoints(carrierId: string, country: string, zip: string) {
+  return packlink.getPickupPoints(carrierId, country, zip);
 }
 
 export async function createOrder(input: CreateOrderInput) {
@@ -143,7 +138,29 @@ export async function createOrder(input: CreateOrderInput) {
     subtotal += unitPrice * item.quantity;
   }
 
-  const shippingCost = await getShippingCost(input.shippingZone);
+  // Re-cotizar el envío con Packlink (no confiar en el precio del cliente)
+  const pkg = packlink.buildPackage(
+    input.items.map((i) => ({ weightGrams: productMap.get(i.productId)!.weightGrams, quantity: i.quantity })),
+  );
+  const quote = await packlink.quoteShipping({
+    toCountry: input.address.country,
+    toZip:     input.address.postalCode,
+    packages:  [pkg],
+  });
+  const allServices = [...quote.home, ...quote.pickup];
+  const matched = allServices.find((s) => s.serviceId === input.packlinkServiceId);
+  if (!matched) {
+    throw new AppError('El método de envío seleccionado ya no está disponible. Recarga el checkout.', 400);
+  }
+  const expectsDropoff = input.deliveryType === 'PICKUP_POINT';
+  if (matched.dropoff !== expectsDropoff) {
+    throw new AppError('El método de envío no coincide con el tipo de entrega seleccionado.', 400);
+  }
+  if (expectsDropoff && (!input.pickupPointId || !input.pickupPointName)) {
+    throw new AppError('Selecciona un punto de recogida.', 400);
+  }
+
+  const shippingCost = matched.priceTotal;
   const total = subtotal + shippingCost;
 
   // Crear pedido
@@ -155,6 +172,13 @@ export async function createOrder(input: CreateOrderInput) {
       subtotal,
       shippingCost,
       total,
+      deliveryType:         input.deliveryType,
+      packlinkServiceId:    matched.serviceId,
+      packlinkCarrierName:  matched.carrierName,
+      packlinkServiceName:  matched.serviceName,
+      pickupPointId:        expectsDropoff ? input.pickupPointId      ?? null : null,
+      pickupPointName:      expectsDropoff ? input.pickupPointName    ?? null : null,
+      pickupPointAddress:   expectsDropoff ? input.pickupPointAddress ?? null : null,
       items: {
         create: input.items.map((item) => ({
           productId:         item.productId,

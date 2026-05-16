@@ -55,10 +55,19 @@ export default function AdminOrdersPage() {
         }
       }
 
+      // When marking as SHIPPED, give admin the option to skip Packlink (manual carrier)
+      let skipPacklink = false;
+      if (status === 'SHIPPED' && order.status !== 'SHIPPED' && order.packlinkServiceId) {
+        skipPacklink = !window.confirm(
+          'Se creará y pagará el envío en Packlink usando el servicio seleccionado por el cliente. ¿Continuar?\n\n(Pulsa Cancelar para marcar como enviado SIN llamar a Packlink — envío manual.)',
+        );
+      }
+
       const updated = await updateOrderStatus(
         order.id,
         status,
-        Object.keys(replenishStock).length > 0 ? replenishStock : undefined
+        Object.keys(replenishStock).length > 0 ? replenishStock : undefined,
+        skipPacklink || undefined,
       );
       setData((prev) =>
         prev
@@ -181,6 +190,44 @@ export default function AdminOrdersPage() {
 
                       {/* Dirección + cambio de estado */}
                       <div>
+                        {(order.packlinkCarrierName || order.packlinkTrackingNumber) && (
+                          <div className="mb-4">
+                            <h3 className="font-semibold text-brand-dark mb-2 text-sm">Envío</h3>
+                            <div className="text-sm text-gray-600 leading-relaxed">
+                              {order.packlinkCarrierName && (
+                                <p>
+                                  <span className="font-medium">{order.packlinkCarrierName}</span>
+                                  {order.packlinkServiceName ? ` · ${order.packlinkServiceName}` : ''}
+                                  {order.deliveryType === 'PICKUP_POINT' ? ' · Punto de recogida' : ''}
+                                </p>
+                              )}
+                              {order.packlinkTrackingNumber && (
+                                <p>
+                                  Tracking:{' '}
+                                  {order.packlinkTrackingUrl ? (
+                                    <a href={order.packlinkTrackingUrl} target="_blank" rel="noreferrer" className="text-brand-sky hover:underline">
+                                      {order.packlinkTrackingNumber}
+                                    </a>
+                                  ) : (
+                                    <span className="font-mono">{order.packlinkTrackingNumber}</span>
+                                  )}
+                                </p>
+                              )}
+                              {order.packlinkLabelUrl && (
+                                <a href={order.packlinkLabelUrl} target="_blank" rel="noreferrer" className="inline-block mt-1 text-brand-sky hover:underline text-xs">
+                                  Descargar etiqueta ↗
+                                </a>
+                              )}
+                              {order.deliveryType === 'PICKUP_POINT' && order.pickupPointName && (
+                                <p className="mt-1">
+                                  <span className="font-medium">{order.pickupPointName}</span>
+                                  {order.pickupPointAddress ? `, ${order.pickupPointAddress}` : ''}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
                         {order.address && (
                           <div className="mb-4">
                             <h3 className="font-semibold text-brand-dark mb-2 text-sm">Dirección</h3>
