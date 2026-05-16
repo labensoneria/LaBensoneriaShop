@@ -143,6 +143,10 @@ export default function CheckoutPage() {
       setSelectedPickup(null);
       return;
     }
+    if (!selectedService.carrierId || !form.country || !form.postalCode.trim()) {
+      setPickupError('Faltan datos para buscar puntos de recogida. Revisa el país y código postal.');
+      return;
+    }
     setPickupLoading(true);
     setSelectedPickup(null);
     setPickupError(null);

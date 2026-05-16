@@ -71,6 +71,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   let body: unknown = null;
   try { body = text ? JSON.parse(text) : null; } catch { /* keep null */ }
   if (!res.ok) {
+    console.error(`[packlink] HTTP ${res.status} on ${path} — body:`, text);
     const message = (body as any)?.messages?.[0]?.message
       ?? (body as any)?.message
       ?? `Packlink ${res.status}`;
@@ -104,7 +105,7 @@ export async function quoteShipping(params: {
 
   const raw = await call<any[]>(`/v1/services?${q.toString()}`, { method: 'GET' });
 
-const home: QuotedService[]   = [];
+  const home: QuotedService[]   = [];
   const pickup: QuotedService[] = [];
   for (const s of raw ?? []) {
     const dropoff = !!(
@@ -117,9 +118,10 @@ const home: QuotedService[]   = [];
     );
     const priceBase = parseFloat(s.price?.total_price ?? s.price?.base_price ?? '0');
     if (!Number.isFinite(priceBase) || priceBase <= 0) continue;
+    if (dropoff) console.log('[packlink] pickup service FULL:', JSON.stringify(s));
     const quoted: QuotedService = {
       serviceId:   Number(s.id ?? s.service_id),
-      carrierId:   String(s.carrier_id ?? s.carrier ?? ''),
+      carrierId:   String(s.carrier_name ?? s.carrier ?? ''),
       carrierName: String(s.carrier_name ?? s.carrier ?? ''),
       serviceName: String(s.name ?? s.service_name ?? ''),
       priceBase,
@@ -135,8 +137,8 @@ const home: QuotedService[]   = [];
 }
 
 export async function getPickupPoints(carrierId: string, country: string, zip: string): Promise<PickupPoint[]> {
-  const qs = new URLSearchParams({ zip_code: zip, country_code: country });
-  const raw = await call<any[]>(`/v1/dropoffs/${encodeURIComponent(carrierId)}?${qs}`, { method: 'GET' });
+  console.log(`[packlink] getPickupPoints carrierId="${carrierId}" country="${country}" zip="${zip}"`);
+  const raw = await call<any[]>(`/v1/dropoffs/${encodeURIComponent(carrierId)}/${encodeURIComponent(country)}/${encodeURIComponent(zip)}`, { method: 'GET' });
   return (raw ?? []).map((p: any) => ({
     id:      String(p.id ?? p.code),
     name:    String(p.name ?? ''),
