@@ -104,11 +104,7 @@ export async function quoteShipping(params: {
 
   const raw = await call<any[]>(`/v1/services?${q.toString()}`, { method: 'GET' });
 
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[packlink] raw services sample:', JSON.stringify((raw ?? []).slice(0, 2), null, 2));
-  }
-
-  const home: QuotedService[]   = [];
+const home: QuotedService[]   = [];
   const pickup: QuotedService[] = [];
   for (const s of raw ?? []) {
     const dropoff = !!(
