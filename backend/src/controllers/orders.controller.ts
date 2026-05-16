@@ -7,9 +7,11 @@ const createOrderSchema = z.object({
   items: z
     .array(
       z.object({
-        productId:  z.string().uuid(),
-        quantity:   z.number().int().min(1).max(10),
-        asKeychain: z.boolean().default(false),
+        productId:         z.string().uuid(),
+        quantity:          z.number().int().min(1).max(10),
+        asKeychain:        z.boolean().default(false),
+        selectedColorHex:  z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().nullable(),
+        selectedColorName: z.string().optional().nullable(),
       })
     )
     .min(1),

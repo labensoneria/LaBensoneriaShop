@@ -60,7 +60,7 @@ export default function MyOrdersPage() {
                     })}
                   </p>
                   <p className="font-semibold text-brand-dark text-sm">
-                    {order.items.map((i) => `${i.product.name}${i.asKeychain ? ' (llavero)' : ''} ×${i.quantity}`).join(', ')}
+                    {order.items.map((i) => `${i.product.name}${i.asKeychain ? ' (llavero)' : ''}${i.selectedColorName ? ` — ${i.selectedColorName}` : ''} ×${i.quantity}`).join(', ')}
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">

@@ -1,16 +1,16 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { CartItem, Product } from '../types';
+import type { CartItem, Product, ProductColor } from '../types';
 
-function key(productId: string, asKeychain: boolean) {
-  return `${productId}_${asKeychain}`;
+function key(productId: string, asKeychain: boolean, colorHex?: string) {
+  return `${productId}_${asKeychain}_${colorHex ?? ''}`;
 }
 
 interface CartState {
   items: CartItem[];
-  addItem:        (product: Product, asKeychain?: boolean) => void;
-  removeItem:     (productId: string, asKeychain: boolean) => void;
-  updateQuantity: (productId: string, asKeychain: boolean, qty: number) => void;
+  addItem:        (product: Product, asKeychain?: boolean, color?: ProductColor) => void;
+  removeItem:     (productId: string, asKeychain: boolean, colorHex?: string) => void;
+  updateQuantity: (productId: string, asKeychain: boolean, colorHex: string | undefined, qty: number) => void;
   syncStock:      (productId: string, newStock: number | null) => void;
   clear: () => void;
 }
@@ -20,10 +20,10 @@ export const useCartStore = create<CartState>()(
     (set) => ({
       items: [],
 
-      addItem: (product, asKeychain = false) =>
+      addItem: (product, asKeychain = false, color) =>
         set((state) => {
-          const k = key(product.id, asKeychain);
-          const exists = state.items.find((i) => key(i.productId, i.asKeychain) === k);
+          const k = key(product.id, asKeychain, color?.hex);
+          const exists = state.items.find((i) => key(i.productId, i.asKeychain, i.selectedColorHex) === k);
           if (exists) {
             const newQty = exists.quantity + 1;
             const capped = product.stock !== null && product.stock !== undefined
@@ -31,7 +31,7 @@ export const useCartStore = create<CartState>()(
               : newQty;
             return {
               items: state.items.map((i) =>
-                key(i.productId, i.asKeychain) === k
+                key(i.productId, i.asKeychain, i.selectedColorHex) === k
                   ? { ...i, quantity: capped }
                   : i
               ),
@@ -48,23 +48,25 @@ export const useCartStore = create<CartState>()(
                 quantity:   1,
                 asKeychain,
                 stock:      product.stock ?? null,
+                selectedColorHex:  color?.hex,
+                selectedColorName: color?.name,
               },
             ],
           };
         }),
 
-      removeItem: (productId, asKeychain) =>
+      removeItem: (productId, asKeychain, colorHex) =>
         set((state) => ({
           items: state.items.filter(
-            (i) => key(i.productId, i.asKeychain) !== key(productId, asKeychain)
+            (i) => key(i.productId, i.asKeychain, i.selectedColorHex) !== key(productId, asKeychain, colorHex)
           ),
         })),
 
-      updateQuantity: (productId, asKeychain, qty) => {
+      updateQuantity: (productId, asKeychain, colorHex, qty) => {
         if (qty < 1) return;
         set((state) => ({
           items: state.items.map((i) => {
-            if (key(i.productId, i.asKeychain) !== key(productId, asKeychain)) return i;
+            if (key(i.productId, i.asKeychain, i.selectedColorHex) !== key(productId, asKeychain, colorHex)) return i;
             const capped = i.stock !== null ? Math.min(qty, i.stock) : qty;
             return { ...i, quantity: capped };
           }),

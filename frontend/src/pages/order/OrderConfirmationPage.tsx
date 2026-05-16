@@ -121,6 +121,15 @@ export default function OrderConfirmationPage() {
                 <p className="text-sm font-medium text-brand-dark">
                   {item.product.name}{item.asKeychain ? ' (llavero)' : ''}
                 </p>
+                {item.selectedColorHex && (
+                  <p className="text-xs text-brand-greenLight flex items-center gap-1.5">
+                    <span
+                      className="inline-block w-3 h-3 rounded-full border border-gray-300"
+                      style={{ backgroundColor: item.selectedColorHex }}
+                    />
+                    {item.selectedColorName}
+                  </p>
+                )}
                 <p className="text-xs text-gray-400">× {item.quantity}</p>
               </div>
               <p className="font-semibold text-brand-dark">

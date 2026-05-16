@@ -38,7 +38,10 @@ export async function listProducts(
   const [products, total, globalPct] = await Promise.all([
     prisma.product.findMany({
       where,
-      include: { images: { orderBy: { order: 'asc' }, take: 1 } },
+      include: {
+        images: { orderBy: { order: 'asc' }, take: 1 },
+        colors: { orderBy: { order: 'asc' } },
+      },
       orderBy: ORDER_BY[sort],
       skip,
       take: limit,
@@ -65,6 +68,7 @@ export async function getProduct(id: string) {
       where: { id, active: true },
       include: {
         images: { orderBy: { order: 'asc' } },
+        colors: { orderBy: { order: 'asc' } },
         reviews: {
           include: { user: { select: { name: true } } },
           orderBy: { createdAt: 'desc' },

@@ -7,7 +7,7 @@ import LoadingRipple from '../../components/LoadingRipple';
 import StarRating from '../../components/StarRating';
 import { useCartStore } from '../../store/cartStore';
 import { useAuthStore } from '../../store/authStore';
-import type { Product, Review } from '../../types';
+import type { Product, ProductColor, Review } from '../../types';
 
 function BackToCatalogLink({ className = '' }: { className?: string }) {
   return (
@@ -26,6 +26,8 @@ export default function ProductPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [asKeychain, setAsKeychain] = useState(false);
+  const [selectedColor, setSelectedColor] = useState<ProductColor | null>(null);
+  const [colorError, setColorError] = useState(false);
   const [added, setAdded] = useState(false);
   const { addItem } = useCartStore();
   const { user } = useAuthStore();
@@ -147,6 +149,39 @@ export default function ProductPage() {
 
             <p className="text-brand-dark/80 leading-relaxed mb-6">{product.description}</p>
 
+            {/* Selector de color */}
+            {product.colors && product.colors.length > 0 && (
+              <div className="mb-5">
+                <p className="text-sm font-medium text-brand-dark mb-2">
+                  Color{selectedColor && <span className="text-brand-greenLight font-normal ml-2">{selectedColor.name}</span>}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {product.colors.map((c) => {
+                    const isSelected = selectedColor?.id === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => { setSelectedColor(c); setColorError(false); }}
+                        title={c.name}
+                        aria-label={c.name}
+                        aria-pressed={isSelected}
+                        className={`w-8 h-8 rounded-full border-2 transition-all ${
+                          isSelected
+                            ? 'border-brand-dark scale-110 ring-2 ring-brand-greenLight/40 ring-offset-1'
+                            : 'border-gray-300 hover:scale-105'
+                        }`}
+                        style={{ backgroundColor: c.hex }}
+                      />
+                    );
+                  })}
+                </div>
+                {colorError && (
+                  <p className="text-xs text-red-500 mt-2">Elige un color antes de añadir al carrito.</p>
+                )}
+              </div>
+            )}
+
             {/* Opcion llavero */}
             {product.convertibleToKeychain && (
               <div className="flex items-center gap-3 mb-5 p-3 rounded-xl bg-brand-cream/60 border border-brand-greenLight/30">
@@ -172,7 +207,11 @@ export default function ProductPage() {
               disabled={isOutOfStock}
               onClick={() => {
                 if (isOutOfStock) return;
-                addItem(product, asKeychain);
+                if (product.colors && product.colors.length > 0 && !selectedColor) {
+                  setColorError(true);
+                  return;
+                }
+                addItem(product, asKeychain, selectedColor ?? undefined);
                 setAdded(true);
                 setTimeout(() => setAdded(false), 2000);
               }}

@@ -7,6 +7,8 @@ import {
   adminUpdateProduct,
   adminUploadImages,
   adminDeleteImage,
+  adminAddProductColor,
+  adminDeleteProductColor,
 } from '../../../api/adminProducts';
 import type { Product } from '../../../types';
 
@@ -40,6 +42,10 @@ export default function AdminProductFormPage() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [newColorHex, setNewColorHex] = useState('#7FAF8A');
+  const [newColorName, setNewColorName] = useState('');
+  const [colorError, setColorError] = useState<string | null>(null);
+  const [colorBusy, setColorBusy] = useState(false);
 
   useEffect(() => {
     if (!isEdit || !id) {
@@ -85,6 +91,34 @@ export default function AdminProductFormPage() {
       ignore = true;
     };
   }, [id, isEdit]);
+
+  async function handleAddColor() {
+    if (!product) return;
+    setColorError(null);
+    const name = newColorName.trim();
+    if (!name) { setColorError('Pon un nombre al color'); return; }
+    setColorBusy(true);
+    try {
+      const created = await adminAddProductColor(product.id, newColorHex, name);
+      setProduct((prev) => prev ? { ...prev, colors: [...(prev.colors ?? []), created] } : prev);
+      setNewColorName('');
+    } catch (err: unknown) {
+      setColorError(err instanceof Error ? err.message : 'Error');
+    } finally {
+      setColorBusy(false);
+    }
+  }
+
+  async function handleDeleteColor(colorId: string) {
+    if (!product) return;
+    if (!confirm('¿Eliminar este color?')) return;
+    try {
+      await adminDeleteProductColor(product.id, colorId);
+      setProduct((prev) => prev ? { ...prev, colors: (prev.colors ?? []).filter((c) => c.id !== colorId) } : prev);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Error');
+    }
+  }
 
   function handleChange(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value, type } = e.target;
@@ -273,6 +307,71 @@ export default function AdminProductFormPage() {
               className="text-sm text-brand-dark"
             />
           </div>
+
+          {isEdit && product && (
+            <div>
+              <label className="block text-sm font-medium text-brand-dark mb-1">Colores disponibles</label>
+              <p className="text-xs text-gray-400 mb-2">
+                Si añades colores, los clientes deberán elegir uno antes de comprar. Si no, no se mostrará selector.
+              </p>
+
+              {product.colors && product.colors.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {product.colors.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex items-center gap-2 bg-brand-cream/60 border border-brand-greenLight/40 rounded-full pl-1 pr-3 py-1"
+                    >
+                      <span
+                        className="inline-block w-5 h-5 rounded-full border border-gray-300"
+                        style={{ backgroundColor: c.hex }}
+                      />
+                      <span className="text-sm text-brand-dark">{c.name}</span>
+                      <span className="text-xs text-gray-400 font-mono">{c.hex}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteColor(c.id)}
+                        className="text-red-400 hover:text-red-600 text-sm leading-none"
+                        title="Eliminar"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  type="color"
+                  value={newColorHex}
+                  onChange={(e) => setNewColorHex(e.target.value)}
+                  className="w-12 h-10 border border-brand-greenLight rounded-lg cursor-pointer"
+                  aria-label="Elegir color"
+                />
+                <input
+                  type="text"
+                  value={newColorName}
+                  onChange={(e) => setNewColorName(e.target.value)}
+                  placeholder="Nombre (ej. Rosa pastel)"
+                  className="flex-1 min-w-[140px] border border-brand-greenLight rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-green"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddColor}
+                  disabled={colorBusy}
+                  className="bg-brand-green text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-brand-dark transition-colors disabled:opacity-50"
+                >
+                  Añadir color
+                </button>
+              </div>
+              {colorError && <p className="text-red-500 text-sm mt-2">{colorError}</p>}
+            </div>
+          )}
+
+          {isEdit === false && (
+            <p className="text-xs text-gray-400">Los colores se podrán configurar al guardar el producto.</p>
+          )}
 
           {error && <p className="text-red-500 text-sm">{error}</p>}
 

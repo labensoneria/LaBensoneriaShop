@@ -51,6 +51,22 @@ export default function ProductCard({ product, newProductDays = 14 }: Props) {
           {product.convertibleToKeychain && (
             <p className="card__description">+ versión llavero disponible</p>
           )}
+          {product.colors && product.colors.length > 0 && (
+            <div className="flex items-center gap-1 mt-1.5">
+              {product.colors.slice(0, 5).map((c) => (
+                <span
+                  key={c.id}
+                  className="inline-block w-3.5 h-3.5 rounded-full border border-gray-300"
+                  style={{ backgroundColor: c.hex }}
+                  title={c.name}
+                  aria-label={c.name}
+                />
+              ))}
+              {product.colors.length > 5 && (
+                <span className="text-[10px] text-gray-400 ml-0.5">+{product.colors.length - 5}</span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="card__footer">

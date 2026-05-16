@@ -46,12 +46,20 @@ export async function sendOrderConfirmation(orderId: string): Promise<void> {
 
   const itemsHtml = order.items
     .map(
-      (item) => `
+      (item) => {
+        const colorChip = item.selectedColorHex
+          ? `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${item.selectedColorHex};border:1px solid #ccc;vertical-align:middle;margin-right:4px;"></span><span style="color:#555;font-size:13px;">${item.selectedColorName ?? ''}</span>`
+          : '';
+        return `
         <tr>
-          <td style="padding:8px 0;border-bottom:1px solid #e8e4da;">${item.product.name}${item.asKeychain ? ' (llavero)' : ''}</td>
+          <td style="padding:8px 0;border-bottom:1px solid #e8e4da;">
+            ${item.product.name}${item.asKeychain ? ' (llavero)' : ''}
+            ${colorChip ? `<br />${colorChip}` : ''}
+          </td>
           <td style="padding:8px 0;border-bottom:1px solid #e8e4da;text-align:center;">${item.quantity}</td>
           <td style="padding:8px 0;border-bottom:1px solid #e8e4da;text-align:right;">${(parseFloat(item.unitPrice.toString()) * item.quantity).toFixed(2)} €</td>
-        </tr>`,
+        </tr>`;
+      },
     )
     .join('');
 

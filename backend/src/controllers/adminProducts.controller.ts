@@ -93,3 +93,27 @@ export async function uploadImages(req: Request, res: Response, next: NextFuncti
     next(err);
   }
 }
+
+const addColorSchema = z.object({
+  hex:  z.string(),
+  name: z.string().min(1),
+});
+
+export async function addColor(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { hex, name } = addColorSchema.parse(req.body);
+    const color = await adminService.addProductColor(req.params.id, hex, name);
+    res.status(201).json(color);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteColor(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    await adminService.deleteProductColor(req.params.id, req.params.colorId);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}

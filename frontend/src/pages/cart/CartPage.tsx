@@ -83,7 +83,7 @@ export default function CartPage() {
       <div className="flex flex-col gap-4 mb-8">
         {items.map((item) => (
           <div
-            key={`${item.productId}_${item.asKeychain}`}
+            key={`${item.productId}_${item.asKeychain}_${item.selectedColorHex ?? ''}`}
             className="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-4"
           >
             <div className="w-16 h-16 rounded-xl bg-brand-cream overflow-hidden flex-shrink-0">
@@ -99,13 +99,22 @@ export default function CartPage() {
               {item.asKeychain && (
                 <p className="text-xs text-brand-sky">Version llavero</p>
               )}
+              {item.selectedColorHex && (
+                <p className="text-xs text-brand-greenLight flex items-center gap-1.5">
+                  <span
+                    className="inline-block w-3 h-3 rounded-full border border-gray-300"
+                    style={{ backgroundColor: item.selectedColorHex }}
+                  />
+                  {item.selectedColorName}
+                </p>
+              )}
               <p className="text-brand-green font-bold">{item.price.toFixed(2)} EUR</p>
             </div>
 
             <div className="flex flex-col items-center gap-1">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => updateQuantity(item.productId, item.asKeychain, item.quantity - 1)}
+                  onClick={() => updateQuantity(item.productId, item.asKeychain, item.selectedColorHex, item.quantity - 1)}
                   className="w-7 h-7 rounded-full bg-brand-cream text-brand-dark font-bold hover:bg-brand-greenLight hover:text-white transition-colors flex items-center justify-center"
                   aria-label="Reducir cantidad"
                 >
@@ -113,7 +122,7 @@ export default function CartPage() {
                 </button>
                 <span className="w-6 text-center font-semibold text-brand-dark">{item.quantity}</span>
                 <button
-                  onClick={() => updateQuantity(item.productId, item.asKeychain, item.quantity + 1)}
+                  onClick={() => updateQuantity(item.productId, item.asKeychain, item.selectedColorHex, item.quantity + 1)}
                   disabled={item.stock !== null && item.quantity >= item.stock}
                   className="w-7 h-7 rounded-full bg-brand-cream text-brand-dark font-bold hover:bg-brand-greenLight hover:text-white transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
                   aria-label="Aumentar cantidad"
@@ -129,7 +138,7 @@ export default function CartPage() {
             <div className="text-right flex-shrink-0">
               <p className="font-bold text-brand-dark">{(item.price * item.quantity).toFixed(2)} EUR</p>
               <button
-                onClick={() => removeItem(item.productId, item.asKeychain)}
+                onClick={() => removeItem(item.productId, item.asKeychain, item.selectedColorHex)}
                 className="text-xs text-red-400 hover:text-red-600 transition-colors mt-1"
               >
                 Eliminar

@@ -38,8 +38,18 @@ model Product {
   active                Boolean        @default(true)
   publishedAt           DateTime       @default(now())
   images                ProductImage[]
+  colors                ProductColor[]
   orderItems            OrderItem[]
   reviews               Review[]
+}
+
+model ProductColor {
+  id        String  @id @default(uuid())
+  productId String
+  hex       String
+  name      String
+  order     Int     @default(0)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model ProductImage {
@@ -87,14 +97,16 @@ enum PaymentStatus {
 }
 
 model OrderItem {
-  id         String  @id @default(uuid())
-  orderId    String
-  productId  String
-  quantity   Int
-  asKeychain Boolean @default(false)
-  unitPrice  Decimal @db.Decimal(10, 2)
-  order      Order   @relation(fields: [orderId], references: [id])
-  product    Product @relation(fields: [productId], references: [id])
+  id                 String  @id @default(uuid())
+  orderId            String
+  productId          String
+  quantity           Int
+  asKeychain         Boolean @default(false)
+  unitPrice          Decimal @db.Decimal(10, 2)
+  selectedColorHex   String?
+  selectedColorName  String?
+  order              Order   @relation(fields: [orderId], references: [id])
+  product            Product @relation(fields: [productId], references: [id])
 }
 
 model ShippingAddress {

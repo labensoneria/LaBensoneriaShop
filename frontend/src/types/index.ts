@@ -5,6 +5,14 @@ export interface ProductImage {
   order: number;
 }
 
+export interface ProductColor {
+  id: string;
+  productId: string;
+  hex: string;
+  name: string;
+  order: number;
+}
+
 export interface Review {
   id: string;
   productId: string;
@@ -29,6 +37,7 @@ export interface Product {
   active: boolean;
   publishedAt: string;
   images: ProductImage[];
+  colors?: ProductColor[];
   reviews?: Review[];
 }
 
@@ -52,6 +61,8 @@ export interface CartItem {
   quantity:  number;
   asKeychain: boolean;
   stock:     number | null;
+  selectedColorHex?:  string;
+  selectedColorName?: string;
 }
 
 // ── Pedidos ──────────────────────────────────────────────────────────────────
@@ -61,11 +72,13 @@ export type OrderStatus    = 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'COMPLETED';
 export type PaymentStatus  = 'UNPAID' | 'PAID' | 'FAILED' | 'REFUNDED';
 
 export interface OrderItemDetail {
-  id:         string;
-  productId:  string;
-  quantity:   number;
-  asKeychain: boolean;
-  unitPrice:  string;
+  id:                 string;
+  productId:          string;
+  quantity:           number;
+  asKeychain:         boolean;
+  unitPrice:          string;
+  selectedColorHex?:  string | null;
+  selectedColorName?: string | null;
   product: {
     name:   string;
     images: { cloudinaryUrl: string }[];
@@ -113,7 +126,7 @@ export interface OrdersAvailability {
 }
 
 export interface CreateOrderPayload {
-  items: { productId: string; quantity: number; asKeychain: boolean }[];
+  items: { productId: string; quantity: number; asKeychain: boolean; selectedColorHex?: string; selectedColorName?: string }[];
   guestEmail:            string;
   guestName:             string;
   shippingZone:          ShippingZone;

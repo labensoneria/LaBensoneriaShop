@@ -1,5 +1,5 @@
 import { apiFetch } from './client';
-import type { PaginatedProducts, Product } from '../types';
+import type { PaginatedProducts, Product, ProductColor } from '../types';
 
 export function adminGetProducts(page = 1, limit = 20): Promise<PaginatedProducts> {
   return apiFetch<PaginatedProducts>(`/api/admin/products?page=${page}&limit=${limit}`);
@@ -59,5 +59,18 @@ export function adminUploadImages(id: string, files: FileList): Promise<Product>
   return apiFetch<Product>(`/api/admin/products/${id}/images`, {
     method: 'POST',
     body: form,
+  });
+}
+
+export function adminAddProductColor(productId: string, hex: string, name: string): Promise<ProductColor> {
+  return apiFetch<ProductColor>(`/api/admin/products/${productId}/colors`, {
+    method: 'POST',
+    body: JSON.stringify({ hex, name }),
+  });
+}
+
+export function adminDeleteProductColor(productId: string, colorId: string): Promise<void> {
+  return apiFetch<void>(`/api/admin/products/${productId}/colors/${colorId}`, {
+    method: 'DELETE',
   });
 }

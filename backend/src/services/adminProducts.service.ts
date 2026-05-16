@@ -19,12 +19,37 @@ export async function listAllProducts(page = 1, limit = 20) {
 export async function getProductById(id: string) {
   const product = await prisma.product.findUnique({
     where: { id },
-    include: { images: { orderBy: { order: 'asc' } } },
+    include: {
+      images: { orderBy: { order: 'asc' } },
+      colors: { orderBy: { order: 'asc' } },
+    },
   });
 
   if (!product) throw new AppError('Producto no encontrado', 404);
 
   return product;
+}
+
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+
+export async function addProductColor(productId: string, hex: string, name: string) {
+  if (!HEX_RE.test(hex)) throw new AppError('Color inválido (formato esperado: #RRGGBB)', 400);
+  const trimmedName = name.trim();
+  if (!trimmedName) throw new AppError('El nombre del color es obligatorio', 400);
+
+  const product = await prisma.product.findUnique({ where: { id: productId } });
+  if (!product) throw new AppError('Producto no encontrado', 404);
+
+  const existing = await prisma.productColor.count({ where: { productId } });
+  return prisma.productColor.create({
+    data: { productId, hex: hex.toLowerCase(), name: trimmedName, order: existing },
+  });
+}
+
+export async function deleteProductColor(productId: string, colorId: string) {
+  const color = await prisma.productColor.findFirst({ where: { id: colorId, productId } });
+  if (!color) throw new AppError('Color no encontrado', 404);
+  await prisma.productColor.delete({ where: { id: colorId } });
 }
 
 export async function createProduct(data: {

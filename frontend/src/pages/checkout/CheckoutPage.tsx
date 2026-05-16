@@ -71,9 +71,12 @@ export default function CheckoutPage() {
     try {
       const order = await createOrder({
         items: items.map((i) => ({
-          productId:  i.productId,
-          quantity:   i.quantity,
-          asKeychain: i.asKeychain,
+          productId:         i.productId,
+          quantity:          i.quantity,
+          asKeychain:        i.asKeychain,
+          ...(i.selectedColorHex
+            ? { selectedColorHex: i.selectedColorHex, selectedColorName: i.selectedColorName }
+            : {}),
         })),
         guestEmail:   form.guestEmail,
         guestName:    form.guestName,
@@ -315,9 +318,18 @@ export default function CheckoutPage() {
 
             <div className="flex flex-col gap-2 mb-4">
               {items.map((item) => (
-                <div key={`${item.productId}_${item.asKeychain}`} className="flex justify-between text-sm">
-                  <span className="text-brand-dark">
-                    {item.name}{item.asKeychain ? ' (llavero)' : ''} × {item.quantity}
+                <div key={`${item.productId}_${item.asKeychain}_${item.selectedColorHex ?? ''}`} className="flex justify-between text-sm">
+                  <span className="text-brand-dark flex items-center gap-1.5">
+                    {item.name}{item.asKeychain ? ' (llavero)' : ''}
+                    {item.selectedColorHex && (
+                      <>
+                        <span
+                          className="inline-block w-3 h-3 rounded-full border border-gray-300"
+                          style={{ backgroundColor: item.selectedColorHex }}
+                        />
+                        <span className="text-xs text-gray-500">{item.selectedColorName}</span>
+                      </>
+                    )} × {item.quantity}
                   </span>
                   <span className="font-semibold">{(item.price * item.quantity).toFixed(2)} €</span>
                 </div>

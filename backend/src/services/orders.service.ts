@@ -56,6 +56,8 @@ interface OrderItemInput {
   productId: string;
   quantity:  number;
   asKeychain: boolean;
+  selectedColorHex?:  string | null;
+  selectedColorName?: string | null;
 }
 
 interface AddressInput {
@@ -88,6 +90,7 @@ export async function createOrder(input: CreateOrderInput) {
   const productIds = [...new Set(input.items.map((i) => i.productId))];
   const products = await prisma.product.findMany({
     where: { id: { in: productIds }, active: true },
+    include: { colors: true },
   });
 
   if (products.length !== productIds.length) {
@@ -100,6 +103,20 @@ export async function createOrder(input: CreateOrderInput) {
     const product = productMap.get(item.productId)!;
     if (item.asKeychain && !product.convertibleToKeychain) {
       throw new AppError(`"${product.name}" no está disponible en versión llavero`, 400);
+    }
+    if (product.colors.length > 0) {
+      if (!item.selectedColorHex) {
+        throw new AppError(`Debes elegir un color para "${product.name}"`, 400);
+      }
+      const match = product.colors.find((c) => c.hex.toLowerCase() === item.selectedColorHex!.toLowerCase());
+      if (!match) {
+        throw new AppError(`El color seleccionado no está disponible para "${product.name}"`, 400);
+      }
+      // Normalizar el nombre desde la DB (no fiarse del cliente)
+      item.selectedColorHex  = match.hex;
+      item.selectedColorName = match.name;
+    } else if (item.selectedColorHex) {
+      throw new AppError(`"${product.name}" no tiene variantes de color`, 400);
     }
     if (product.stock !== null) {
       if (product.stock === 0) {
@@ -140,10 +157,12 @@ export async function createOrder(input: CreateOrderInput) {
       total,
       items: {
         create: input.items.map((item) => ({
-          productId:  item.productId,
-          quantity:   item.quantity,
-          asKeychain: item.asKeychain,
-          unitPrice:  unitPrices.get(item.productId)!,
+          productId:         item.productId,
+          quantity:          item.quantity,
+          asKeychain:        item.asKeychain,
+          unitPrice:         unitPrices.get(item.productId)!,
+          selectedColorHex:  item.selectedColorHex ?? null,
+          selectedColorName: item.selectedColorName ?? null,
         })),
       },
       address: { create: input.address },

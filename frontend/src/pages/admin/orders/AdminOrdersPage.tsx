@@ -147,8 +147,18 @@ export default function AdminOrdersPage() {
                         <div className="flex flex-col gap-1">
                           {order.items.map((item) => (
                             <div key={item.id} className="flex justify-between text-sm">
-                              <span className="text-gray-600">
-                                {item.product.name}{item.asKeychain ? ' (llavero)' : ''} × {item.quantity}
+                              <span className="text-gray-600 flex items-center gap-1.5 flex-wrap">
+                                <span>{item.product.name}{item.asKeychain ? ' (llavero)' : ''}</span>
+                                {item.selectedColorHex && (
+                                  <>
+                                    <span
+                                      className="inline-block w-3 h-3 rounded-full border border-gray-300"
+                                      style={{ backgroundColor: item.selectedColorHex }}
+                                    />
+                                    <span className="text-xs text-gray-500">{item.selectedColorName}</span>
+                                  </>
+                                )}
+                                <span>× {item.quantity}</span>
                               </span>
                               <span className="font-medium">
                                 {(parseFloat(item.unitPrice) * item.quantity).toFixed(2)} €

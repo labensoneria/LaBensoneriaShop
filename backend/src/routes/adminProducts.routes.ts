@@ -22,5 +22,7 @@ router.delete('/:id',                ctrl.remove);
 router.delete('/:id/permanent',      ctrl.permanentDelete);
 router.post('/:id/images',            upload.array('images', 10), ctrl.uploadImages);
 router.delete('/:id/images/:imageId', ctrl.deleteImage);
+router.post('/:id/colors',            ctrl.addColor);
+router.delete('/:id/colors/:colorId', ctrl.deleteColor);
 
 export default router;
