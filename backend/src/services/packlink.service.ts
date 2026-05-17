@@ -87,7 +87,6 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   let body: unknown = null;
   try { body = text ? JSON.parse(text) : null; } catch { /* keep null */ }
   if (!res.ok) {
-    console.error(`[packlink] HTTP ${res.status} on ${path} — body:`, text);
     const message = (body as any)?.messages?.[0]?.message
       ?? (body as any)?.message
       ?? `Packlink ${res.status}`;
@@ -173,7 +172,7 @@ export async function getPickupPoints(carrierId: string, country: string, zip: s
       { id: 'MOCK_POINT_2', name: 'Mock Locker (norte)',  address: 'Avenida Falsa 456', city: 'Madrid', zip },
     ];
   }
-  console.log(`[packlink] getPickupPoints carrierId="${carrierId}" country="${country}" zip="${zip}"`);
+  // console.log(`[packlink] getPickupPoints carrierId="${carrierId}" country="${country}" zip="${zip}"`);
   const raw = await call<any[]>(`/v1/dropoffs/${encodeURIComponent(carrierId)}/${encodeURIComponent(country)}/${encodeURIComponent(zip)}`, { method: 'GET' });
   return (raw ?? []).map((p: any) => ({
     id:      String(p.id ?? p.code),

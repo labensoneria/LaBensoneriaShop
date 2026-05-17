@@ -10,7 +10,7 @@ interface Props {
 
 export default function ProductCard({ product, newProductDays = 14 }: Props) {
   const thumb = product.images[0]?.cloudinaryUrl;
-  const price = parseFloat(product.price).toFixed(2);
+  const price = Number.parseFloat(product.price).toFixed(2);
   const hasDiscount = (product.appliedDiscountPercent ?? 0) > 0;
   const isNew = (Date.now() - new Date(product.publishedAt).getTime()) < newProductDays * 24 * 60 * 60 * 1000;
   const isOutOfStock = product.stock !== null && product.stock !== undefined && product.stock === 0;

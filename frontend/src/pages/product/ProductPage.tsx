@@ -58,7 +58,7 @@ export default function ProductPage() {
     );
   }
 
-  const price = parseFloat(product.price).toFixed(2);
+  const price = Number.parseFloat(product.price).toFixed(2);
   const hasDiscount = (product.appliedDiscountPercent ?? 0) > 0;
   const isOutOfStock = product.stock !== null && product.stock !== undefined && product.stock === 0;
   const isLowStock = product.stock !== null && product.stock !== undefined && product.stock > 0 && product.stock <= 5;
