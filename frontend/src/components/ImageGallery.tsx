@@ -3,8 +3,8 @@ import LoadingRipple from './LoadingRipple';
 import type { ProductImage } from '../types';
 
 interface Props {
-  images: ProductImage[];
-  name: string;
+  readonly images: ProductImage[];
+  readonly name: string;
 }
 
 export default function ImageGallery({ images, name }: Props) {

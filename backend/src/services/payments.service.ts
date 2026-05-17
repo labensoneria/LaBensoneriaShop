@@ -38,7 +38,7 @@ export async function createCheckoutSession(orderId: string) {
         stripeCheckoutSessionId: `mock_cs_${orderId}`,
         paidAt:                new Date(),
         paymentCurrency:       'eur',
-        paymentAmount:         parseFloat(order.total.toString()),
+        paymentAmount:         Number.parseFloat(order.total.toString()),
       },
     });
     return { sessionUrl: `${frontendUrl}/pedido/${orderId}?pagado=true` };
@@ -54,7 +54,7 @@ export async function createCheckoutSession(orderId: string) {
           product_data: {
             name: `${item.product.name}${item.asKeychain ? ' (llavero)' : ''}`,
           },
-          unit_amount: Math.round(parseFloat(item.unitPrice.toString()) * 100),
+          unit_amount: Math.round(Number.parseFloat(item.unitPrice.toString()) * 100),
         },
         quantity: item.quantity,
       })),
@@ -62,7 +62,7 @@ export async function createCheckoutSession(orderId: string) {
         price_data: {
           currency: 'eur',
           product_data: { name: 'Gastos de envío' },
-          unit_amount: Math.round(parseFloat(order.shippingCost.toString()) * 100),
+          unit_amount: Math.round(Number.parseFloat(order.shippingCost.toString()) * 100),
         },
         quantity: 1,
       },

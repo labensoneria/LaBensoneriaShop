@@ -18,7 +18,7 @@ const statusSchema = z.object({
 export async function list(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { page, limit, status } = listQuerySchema.parse(req.query);
-    res.json(await adminOrdersService.listOrders(page, limit, status as OrderStatus | undefined));
+    res.json(await adminOrdersService.listOrders(page, limit, status));
   } catch (err) {
     next(err);
   }

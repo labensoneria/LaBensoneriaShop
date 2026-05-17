@@ -137,10 +137,10 @@ export default function AdminProductFormPage() {
       const payload = {
         name: form.name,
         description: form.description || null,
-        price: parseFloat(form.price),
+        price: Number.parseFloat(form.price),
         convertibleToKeychain: form.convertibleToKeychain,
-        stock: form.stock !== '' ? parseInt(form.stock, 10) : null,
-        discountPercent: form.discountPercent !== '' ? parseInt(form.discountPercent, 10) : null,
+        stock: form.stock === '' ? null : Number.parseInt(form.stock, 10),
+        discountPercent: form.discountPercent === '' ? null : Number.parseInt(form.discountPercent, 10),
       };
 
       const saved = isEdit && id

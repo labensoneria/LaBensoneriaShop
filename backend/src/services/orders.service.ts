@@ -125,15 +125,15 @@ export async function createOrder(input: CreateOrderInput) {
 
   // Calcular importes (el precio siempre viene de la DB, nunca del cliente)
   const globalDiscountSetting = await prisma.appSettings.findUnique({ where: { key: 'globalDiscountPercent' } });
-  const globalPct = globalDiscountSetting ? (parseInt(globalDiscountSetting.value, 10) || 0) : 0;
+  const globalPct = globalDiscountSetting ? (Number.parseInt(globalDiscountSetting.value, 10) || 0) : 0;
 
   let subtotal = 0;
   const unitPrices = new Map<string, number>();
   for (const item of input.items) {
     const product = productMap.get(item.productId)!;
-    const rawPrice = parseFloat(product.price.toString());
+    const rawPrice = Number.parseFloat(product.price.toString());
     const { effectivePrice } = computeEffectivePrice(rawPrice, product.discountPercent, globalPct);
-    const unitPrice = parseFloat(effectivePrice);
+    const unitPrice = Number.parseFloat(effectivePrice);
     unitPrices.set(item.productId, unitPrice);
     subtotal += unitPrice * item.quantity;
   }

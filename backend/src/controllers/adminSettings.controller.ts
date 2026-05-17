@@ -5,13 +5,13 @@ import * as adminSettingsService from '../services/adminSettings.service';
 const updateSchema = z.object({
   ordersEnabled:  z.enum(['true', 'false']).optional(),
   newProductDays: z.coerce.number().int().min(1).max(365).optional()
-    .transform((v) => v !== undefined ? String(v) : undefined),
+    .transform((v) => v === undefined ? undefined : String(v)),
 });
 
 export async function getPublic(_req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const settings = await adminSettingsService.getSettings();
-    res.json({ newProductDays: parseInt(settings.newProductDays, 10) });
+    res.json({ newProductDays: Number.parseInt(settings.newProductDays, 10) });
   } catch (err) {
     next(err);
   }

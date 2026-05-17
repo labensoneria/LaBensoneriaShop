@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import prisma from '../utils/prisma';
 import { AppError } from '../utils/AppError';
@@ -36,7 +36,7 @@ export interface AddressFields {
 
 export async function login(email: string, password: string) {
   const raw = await prisma.user.findUnique({ where: { email } });
-  if (!raw || !raw.passwordHash) throw new AppError('Credenciales incorrectas', 401);
+  if (!raw?.passwordHash) throw new AppError('Credenciales incorrectas', 401);
 
   const valid = await bcrypt.compare(password, raw.passwordHash);
   if (!valid) throw new AppError('Credenciales incorrectas', 401);

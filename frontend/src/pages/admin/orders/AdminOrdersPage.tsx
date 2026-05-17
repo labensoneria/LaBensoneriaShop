@@ -50,7 +50,7 @@ export default function AdminOrdersPage() {
       const stockItems = order.items.filter((item) => item.product.stock !== null && item.product.stock !== undefined);
       const replenishStock: Record<string, number> = {};
       for (const item of stockItems) {
-        if (window.confirm(`¿Reponer stock de "${item.product.name}" (+${item.quantity})?`)) {
+        if (globalThis.confirm(`¿Reponer stock de "${item.product.name}" (+${item.quantity})?`)) {
           replenishStock[item.productId] = item.quantity;
         }
       }
@@ -58,7 +58,7 @@ export default function AdminOrdersPage() {
       // When marking as SHIPPED, give admin the option to skip Packlink (manual carrier)
       let skipPacklink = false;
       if (status === 'SHIPPED' && order.status !== 'SHIPPED' && order.packlinkServiceId) {
-        skipPacklink = !window.confirm(
+        skipPacklink = !globalThis.confirm(
           'Se creará y pagará el envío en Packlink usando el servicio seleccionado por el cliente. ¿Continuar?\n\n(Pulsa Cancelar para marcar como enviado SIN llamar a Packlink — envío manual.)',
         );
       }

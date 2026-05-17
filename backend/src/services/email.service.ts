@@ -57,7 +57,7 @@ export async function sendOrderConfirmation(orderId: string): Promise<void> {
             ${colorChip ? `<br />${colorChip}` : ''}
           </td>
           <td style="padding:8px 0;border-bottom:1px solid #e8e4da;text-align:center;">${item.quantity}</td>
-          <td style="padding:8px 0;border-bottom:1px solid #e8e4da;text-align:right;">${(parseFloat(item.unitPrice.toString()) * item.quantity).toFixed(2)} €</td>
+          <td style="padding:8px 0;border-bottom:1px solid #e8e4da;text-align:right;">${(Number.parseFloat(item.unitPrice.toString()) * item.quantity).toFixed(2)} €</td>
         </tr>`;
       },
     )
@@ -90,15 +90,15 @@ export async function sendOrderConfirmation(orderId: string): Promise<void> {
         <tfoot>
           <tr>
             <td colspan="2" style="padding:8px 0;text-align:right;color:#555;">Subtotal</td>
-            <td style="padding:8px 0;text-align:right;">${parseFloat(order.subtotal.toString()).toFixed(2)} €</td>
+            <td style="padding:8px 0;text-align:right;">${Number.parseFloat(order.subtotal.toString()).toFixed(2)} €</td>
           </tr>
           <tr>
             <td colspan="2" style="padding:4px 0;text-align:right;color:#555;">Envío</td>
-            <td style="padding:4px 0;text-align:right;">${parseFloat(order.shippingCost.toString()).toFixed(2)} €</td>
+            <td style="padding:4px 0;text-align:right;">${Number.parseFloat(order.shippingCost.toString()).toFixed(2)} €</td>
           </tr>
           <tr>
             <td colspan="2" style="padding:8px 0;text-align:right;font-weight:bold;border-top:2px solid #4A7C59;">Total</td>
-            <td style="padding:8px 0;text-align:right;font-weight:bold;border-top:2px solid #4A7C59;">${parseFloat(order.total.toString()).toFixed(2)} €</td>
+            <td style="padding:8px 0;text-align:right;font-weight:bold;border-top:2px solid #4A7C59;">${Number.parseFloat(order.total.toString()).toFixed(2)} €</td>
           </tr>
         </tfoot>
       </table>

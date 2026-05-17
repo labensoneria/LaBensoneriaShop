@@ -41,7 +41,7 @@ async function main() {
     {
       name: 'Peluche Oso Panda',
       description: 'Adorable oso panda tejido a mano con hilo amigurumi. Perfecto como regalo o decoración. Medidas aproximadas: 20 cm de alto.',
-      price: 28.0,
+      price: 28,
       convertibleToKeychain: false,
     },
     {
@@ -53,7 +53,7 @@ async function main() {
     {
       name: 'Peluche Conejo',
       description: 'Tierno conejo artesanal con orejas largas y colores pastel. Hecho con lana suave e hipoalergénica. Puede convertirse en llavero.',
-      price: 22.0,
+      price: 22,
       convertibleToKeychain: true,
     },
   ];

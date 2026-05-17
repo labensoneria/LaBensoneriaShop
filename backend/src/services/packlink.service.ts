@@ -1,7 +1,7 @@
 import { AppError } from '../utils/AppError';
 
 const BASE = process.env.PACKLINK_API_URL ?? 'https://api.packlink.com';
-const VAT  = parseFloat(process.env.SHIPPING_VAT_MULTIPLIER ?? '1.21');
+const VAT  = Number.parseFloat(process.env.SHIPPING_VAT_MULTIPLIER ?? '1.21');
 const MOCK = process.env.MOCK_PACKLINK === 'true';
 if (MOCK && process.env.NODE_ENV === 'production') {
   throw new Error('MOCK_PACKLINK must not be enabled in production');
@@ -19,9 +19,9 @@ const SHIPPER = {
 };
 
 const BOX = {
-  height: parseFloat(process.env.SHIPPER_BOX_H_CM ?? '15'),
-  width:  parseFloat(process.env.SHIPPER_BOX_W_CM ?? '20'),
-  length: parseFloat(process.env.SHIPPER_BOX_L_CM ?? '25'),
+  height: Number.parseFloat(process.env.SHIPPER_BOX_H_CM ?? '15'),
+  width:  Number.parseFloat(process.env.SHIPPER_BOX_W_CM ?? '20'),
+  length: Number.parseFloat(process.env.SHIPPER_BOX_L_CM ?? '25'),
 };
 
 export type Package = {
@@ -111,12 +111,12 @@ export async function quoteShipping(params: {
     return {
       home: [{
         serviceId: 99001, carrierId: 'MOCK', carrierName: 'MockCarrier',
-        serviceName: 'Mock Home Delivery', priceBase: 4.50, priceTotal: 5.45,
+        serviceName: 'Mock Home Delivery', priceBase: 4.5, priceTotal: 5.45,
         transitDays: 2, dropoff: false,
       }],
       pickup: [{
         serviceId: 99002, carrierId: 'MOCK', carrierName: 'MockCarrier',
-        serviceName: 'Mock Pickup Point', priceBase: 3.50, priceTotal: 4.24,
+        serviceName: 'Mock Pickup Point', priceBase: 3.5, priceTotal: 4.24,
         transitDays: 3, dropoff: true,
       }],
     };
@@ -146,7 +146,7 @@ export async function quoteShipping(params: {
       s.delivery_type === 'dropoff' ||
       s.to_type === 'dropoff'
     );
-    const priceBase = parseFloat(s.price?.total_price ?? s.price?.base_price ?? '0');
+    const priceBase = Number.parseFloat(s.price?.total_price ?? s.price?.base_price ?? '0');
     if (!Number.isFinite(priceBase) || priceBase <= 0) continue;
     if (dropoff) console.log('[packlink] pickup service FULL:', JSON.stringify(s));
     const quoted: QuotedService = {
@@ -224,7 +224,7 @@ export async function createShipment(
   const payload: any = {
     service_id: opts.serviceId,
     content,
-    price: { amount: parseFloat(order.shippingCost.toString()), currency: 'EUR' },
+    price: { amount: Number.parseFloat(order.shippingCost.toString()), currency: 'EUR' },
     from: {
       name:    SHIPPER.name,
       street1: SHIPPER.street,

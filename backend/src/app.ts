@@ -21,16 +21,18 @@ app.use((req, _res, next) => {
   next();
 });
 
-const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS ?? 'http://localhost:5173')
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const ALLOWED_ORIGINS = new Set(
+  (process.env.CORS_ORIGINS ?? 'http://localhost:5173')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+);
 
 app.use(
   cors({
     origin: (origin, cb) => {
       // Permitir peticiones sin origen (curl, Postman, tests)
-      if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+      if (!origin || ALLOWED_ORIGINS.has(origin)) return cb(null, true);
       cb(new Error(`CORS: origen no permitido - ${origin}`));
     },
     credentials: true,

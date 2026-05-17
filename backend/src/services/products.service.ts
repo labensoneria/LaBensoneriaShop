@@ -7,7 +7,7 @@ export function computeEffectivePrice(
   discountPercent: number | null,
   globalPct: number
 ): { effectivePrice: string; appliedDiscountPercent: number | null } {
-  const pct = discountPercent !== null ? discountPercent : globalPct;
+  const pct = discountPercent ?? globalPct;
   if (pct <= 0) return { effectivePrice: price.toFixed(2), appliedDiscountPercent: null };
   const effective = Math.round(price * (100 - pct)) / 100;
   return { effectivePrice: effective.toFixed(2), appliedDiscountPercent: pct };
@@ -15,8 +15,8 @@ export function computeEffectivePrice(
 
 async function getGlobalDiscountPct(): Promise<number> {
   const setting = await prisma.appSettings.findUnique({ where: { key: 'globalDiscountPercent' } });
-  const pct = setting ? parseInt(setting.value, 10) : 0;
-  return isNaN(pct) ? 0 : pct;
+  const pct = setting ? Number.parseInt(setting.value, 10) : 0;
+  return Number.isNaN(pct) ? 0 : pct;
 }
 
 const ORDER_BY: Record<ProductSort, object> = {
@@ -52,7 +52,7 @@ export async function listProducts(
 
   const enriched = products.map((p) => {
     const { effectivePrice, appliedDiscountPercent } = computeEffectivePrice(
-      parseFloat(p.price.toString()),
+      Number.parseFloat(p.price.toString()),
       p.discountPercent,
       globalPct
     );
@@ -81,7 +81,7 @@ export async function getProduct(id: string) {
   if (!product) return null;
 
   const { effectivePrice, appliedDiscountPercent } = computeEffectivePrice(
-    parseFloat(product.price.toString()),
+    Number.parseFloat(product.price.toString()),
     product.discountPercent,
     globalPct
   );
