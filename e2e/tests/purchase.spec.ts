@@ -11,8 +11,8 @@ test('guest can complete a purchase with mocked shipping + payment', async ({ pa
 
   // Navigate to the cart and proceed to checkout.
   await page.goto('/carrito');
-  const goToCheckout = page.getByRole('link', { name: /pagar|finalizar|checkout/i })
-    .or(page.getByRole('button', { name: /pagar|finalizar|checkout/i }));
+  const goToCheckout = page.getByRole('link', { name: /pagar|finalizar|checkout|continuar/i })
+    .or(page.getByRole('button', { name: /pagar|finalizar|checkout|continuar/i }));
   await goToCheckout.first().click();
   await expect(page).toHaveURL(/\/checkout$/);
 
