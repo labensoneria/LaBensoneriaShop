@@ -65,10 +65,21 @@ function headers(): Record<string, string> {
   };
 }
 
+const BASE_ORIGIN = new URL(BASE).origin;
+
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
+  // Defense-in-depth: resolve `path` against the configured base and refuse
+  // anything that escapes the Packlink origin (protocol-relative URLs, absolute
+  // URLs, ../ traversal). All callers pass internal strings, but this keeps
+  // any future caller from accidentally introducing SSRF.
+  const url = new URL(path, BASE_ORIGIN + '/');
+  if (url.origin !== BASE_ORIGIN) {
+    throw new PacklinkError(`Refusing to call non-Packlink URL: ${url.origin}`, 500);
+  }
+
   let res: Response;
   try {
-    res = await fetch(`${BASE}${path}`, { ...init, headers: { ...headers(), ...((init?.headers as Record<string, string>) ?? {}) } });
+    res = await fetch(url, { ...init, headers: { ...headers(), ...((init?.headers as Record<string, string>) ?? {}) } });
   } catch (err) {
     throw new PacklinkError(`Packlink network error: ${(err as Error).message}`, 502);
   }
